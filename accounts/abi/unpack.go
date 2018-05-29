@@ -22,7 +22,7 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ionchain/ionchain-core/common"
 )
 
 // unpacker is a utility interface that enables us to have

@@ -26,11 +26,11 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/crypto/secp256k1"
+	"github.com/ionchain/ionchain-core/rlp"
 )
 
 // Constants to match up protocol versions and messages

@@ -22,9 +22,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/swarm/storage"
 	"gopkg.in/urfave/cli.v1"
 )
 

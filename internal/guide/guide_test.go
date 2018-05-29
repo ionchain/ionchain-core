@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ionchain/ionchain-core/accounts/keystore"
+	"github.com/ionchain/ionchain-core/core/types"
 )
 
 // Tests that the account management snippets work correctly.

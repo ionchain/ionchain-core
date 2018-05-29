@@ -24,9 +24,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/swarm/storage"
 )
 
 func testApi(t *testing.T, f func(*Api)) {

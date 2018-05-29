@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/log"
 )
 
 // WaitMined waits for tx to be mined on the blockchain.

@@ -25,9 +25,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/swarm/storage"
 )
 
 func init() {

@@ -26,11 +26,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/eth"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core"
+	"github.com/ionchain/ionchain-core/eth"
 	"github.com/ionchain/ionchain-core/internal/jsre"
-	"github.com/ethereum/go-ethereum/node"
+	"github.com/ionchain/ionchain-core/node"
 )
 
 const (

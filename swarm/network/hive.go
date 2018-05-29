@@ -22,12 +22,12 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
-	"github.com/ethereum/go-ethereum/swarm/network/kademlia"
-	"github.com/ethereum/go-ethereum/swarm/storage"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/netutil"
+	"github.com/ionchain/ionchain-core/swarm/network/kademlia"
+	"github.com/ionchain/ionchain-core/swarm/storage"
 )
 
 // Hive is the logistic manager of the swarm

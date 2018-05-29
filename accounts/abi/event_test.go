@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/crypto"
 )
 
 func TestEventId(t *testing.T) {

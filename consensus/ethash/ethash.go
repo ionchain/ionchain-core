@@ -32,9 +32,9 @@ import (
 	"unsafe"
 
 	mmap "github.com/edsrzf/mmap-go"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ionchain/ionchain-core/consensus"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/rpc"
 	metrics "github.com/rcrowley/go-metrics"
 )
 

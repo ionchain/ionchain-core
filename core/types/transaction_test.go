@@ -23,9 +23,9 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/rlp"
 )
 
 // The values in those tests are from the Transaction Tests

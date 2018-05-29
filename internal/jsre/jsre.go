@@ -26,7 +26,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )

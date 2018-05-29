@@ -20,9 +20,9 @@ import (
 	"container/ring"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/log"
 )
 
 // headerRetriever is used by the unconfirmed block set to verify whether a previously

@@ -27,12 +27,12 @@ import (
 	"os"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/logger"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/whisper"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/logger"
+	"github.com/ionchain/ionchain-core/p2p"
+	"github.com/ionchain/ionchain-core/p2p/nat"
+	"github.com/ionchain/ionchain-core/whisper"
 )
 
 func main() {

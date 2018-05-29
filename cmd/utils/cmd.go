@@ -26,12 +26,12 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ionchain/ionchain-core/core"
+	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/internal/debug"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/rlp"
 )
 
 const (

@@ -7,10 +7,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/common/math"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/common/hexutil"
+	"github.com/ionchain/ionchain-core/common/math"
+	"github.com/ionchain/ionchain-core/params"
 )
 
 func (g Genesis) MarshalJSON() ([]byte, error) {

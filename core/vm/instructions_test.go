@@ -4,8 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/params"
 )
 
 func TestByteOp(t *testing.T) {

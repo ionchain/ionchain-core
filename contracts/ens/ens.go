@@ -22,11 +22,11 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/ens/contract"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ionchain/ionchain-core/accounts/abi/bind"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/contracts/ens/contract"
+	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/crypto"
 )
 
 var (

@@ -21,8 +21,8 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/ionchain/ionchain-core/accounts/keystore"
+	"github.com/ionchain/ionchain-core/log"
 )
 
 // deployFaucet queries the user for various input on deploying a faucet, after

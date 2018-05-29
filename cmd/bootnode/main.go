@@ -23,13 +23,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/p2p/netutil"
+	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/discv5"
+	"github.com/ionchain/ionchain-core/p2p/nat"
+	"github.com/ionchain/ionchain-core/p2p/netutil"
 )
 
 func main() {

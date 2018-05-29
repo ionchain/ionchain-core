@@ -19,9 +19,9 @@ package misc
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/params"
 )
 
 // VerifyForkHashes verifies that blocks conforming to network hard-forks do have

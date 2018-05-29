@@ -24,9 +24,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv5"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/crypto"
+	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 )
 
 const powRequirement = 0.00001

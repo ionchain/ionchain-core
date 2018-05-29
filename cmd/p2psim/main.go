@@ -29,12 +29,12 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/simulations"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/p2p"
+	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/simulations"
+	"github.com/ionchain/ionchain-core/p2p/simulations/adapters"
+	"github.com/ionchain/ionchain-core/rpc"
 	"gopkg.in/urfave/cli.v1"
 )
 

@@ -41,23 +41,23 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/accounts"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/eth/downloader"
-	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/ethstats"
-	"github.com/ethereum/go-ethereum/les"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/discv5"
-	"github.com/ethereum/go-ethereum/p2p/nat"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts/keystore"
+	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/core"
+	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/eth"
+	"github.com/ionchain/ionchain-core/eth/downloader"
+	"github.com/ionchain/ionchain-core/ethclient"
+	"github.com/ionchain/ionchain-core/ethstats"
+	"github.com/ionchain/ionchain-core/les"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/p2p"
+	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/discv5"
+	"github.com/ionchain/ionchain-core/p2p/nat"
+	"github.com/ionchain/ionchain-core/params"
 	"golang.org/x/net/websocket"
 )
 
@@ -443,7 +443,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 		case strings.HasPrefix(msg.URL, "https://www.facebook.com/"):
 			username, avatar, address, err = authFacebook(msg.URL)
 		default:
-			err = errors.New("Something funky happened, please open an issue at https://github.com/ethereum/go-ethereum/issues")
+			err = errors.New("Something funky happened, please open an issue at https://github.com/ionchain/ionchain-core/issues")
 		}
 		if err != nil {
 			if err = sendError(conn, err); err != nil {

@@ -23,11 +23,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/discover"
-	"github.com/ethereum/go-ethereum/p2p/simulations/adapters"
+	"github.com/ionchain/ionchain-core/event"
+	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/p2p"
+	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/simulations/adapters"
 )
 
 // NetworkConfig defines configuration options for starting a Network

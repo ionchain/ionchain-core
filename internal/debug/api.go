@@ -33,7 +33,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/ionchain/ionchain-core/log"
 )
 
 // Handler is the global debugging handler.

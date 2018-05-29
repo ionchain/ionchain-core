@@ -28,13 +28,13 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
-	"github.com/ethereum/go-ethereum/cmd/utils"
-	"github.com/ethereum/go-ethereum/contracts/release"
-	"github.com/ethereum/go-ethereum/dashboard"
-	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/node"
-	"github.com/ethereum/go-ethereum/params"
-	whisper "github.com/ethereum/go-ethereum/whisper/whisperv5"
+	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/contracts/release"
+	"github.com/ionchain/ionchain-core/dashboard"
+	"github.com/ionchain/ionchain-core/eth"
+	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/params"
+	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 	"github.com/naoina/toml"
 )
 
