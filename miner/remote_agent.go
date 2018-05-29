@@ -77,6 +77,7 @@ func (a *RemoteAgent) SetReturnCh(returnCh chan<- *Result) {
 	a.returnCh = returnCh
 }
 
+//采用远程模式，通常用矿池协议中
 func (a *RemoteAgent) Start() {
 	if !atomic.CompareAndSwapInt32(&a.running, 0, 1) {
 		return

@@ -78,7 +78,7 @@ type Message interface {
 
 // IntrinsicGas computes the 'intrinsic gas' for a message
 // with the given data.
-//
+// 计算当前交易消耗的GAS
 // TODO convert to uint64
 func IntrinsicGas(data []byte, contractCreation, homestead bool) *big.Int {
 	igas := new(big.Int)

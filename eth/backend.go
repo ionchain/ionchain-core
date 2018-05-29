@@ -327,7 +327,10 @@ func (self *Ethereum) SetEtherbase(etherbase common.Address) {
 	self.miner.SetEtherbase(etherbase)
 }
 
+//启动挖矿程序
 func (s *Ethereum) StartMining(local bool) error {
+
+	// 从命令行参数中获取矿工账号
 	eb, err := s.Etherbase()
 	if err != nil {
 		log.Error("Cannot start mining without etherbase", "err", err)

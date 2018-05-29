@@ -68,6 +68,7 @@ done:
 	}
 }
 
+//采用本地cpu进行挖矿
 func (self *CpuAgent) Start() {
 	if !atomic.CompareAndSwapInt32(&self.isMining, 0, 1) {
 		return // agent already started
@@ -75,16 +76,20 @@ func (self *CpuAgent) Start() {
 	go self.update()
 }
 
+//开始挖矿
 func (self *CpuAgent) update() {
 out:
 	for {
 		select {
+
+		// workCh 队列中存放挖矿信号
 		case work := <-self.workCh:
 			self.mu.Lock()
 			if self.quitCurrentOp != nil {
 				close(self.quitCurrentOp)
 			}
 			self.quitCurrentOp = make(chan struct{})
+			//启动挖矿线程
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
 		case <-self.stop:
@@ -99,7 +104,9 @@ out:
 	}
 }
 
+// 开始挖矿
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
+
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 		self.returnCh <- &Result{work, result}

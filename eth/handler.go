@@ -617,6 +617,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
+
+	//发现新区块的消息
 	case msg.Code == NewBlockMsg:
 		// Retrieve and decode the propagated block
 		var request newBlockData
@@ -649,6 +651,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
+	// 接受发送交易的通信协议
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
