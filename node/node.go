@@ -117,6 +117,7 @@ func New(conf *Config) (*Node, error) {
 
 // Register injects a new service into the node's stack. The service created by
 // the passed constructor must be unique in its type with regard to sibling ones.
+// 向node栈中注册服务
 func (n *Node) Register(constructor ServiceConstructor) error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -124,11 +125,13 @@ func (n *Node) Register(constructor ServiceConstructor) error {
 	if n.server != nil {
 		return ErrNodeRunning
 	}
+	// 已注册的服务
 	n.serviceFuncs = append(n.serviceFuncs, constructor)
 	return nil
 }
 
 // Start create a live P2P node and starts running it.
+// 启动node节点
 func (n *Node) Start() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -143,22 +146,29 @@ func (n *Node) Start() error {
 
 	// Initialize the p2p server. This creates the node key and
 	// discovery databases.
+	// 初始化p2p服务器，创建node key 和 发现数据库
 	n.serverConfig = n.config.P2P
+	// node key ，node节点的公钥
 	n.serverConfig.PrivateKey = n.config.NodeKey()
 	n.serverConfig.Name = n.config.NodeName()
+	// 静态节点
 	if n.serverConfig.StaticNodes == nil {
 		n.serverConfig.StaticNodes = n.config.StaticNodes()
 	}
+	// 可信节点
 	if n.serverConfig.TrustedNodes == nil {
 		n.serverConfig.TrustedNodes = n.config.TrustedNodes()
 	}
+	// 节点数据库
 	if n.serverConfig.NodeDatabase == "" {
 		n.serverConfig.NodeDatabase = n.config.NodeDB()
 	}
+	// 创建p2p服务
 	running := &p2p.Server{Config: n.serverConfig}
 	log.Info("Starting peer-to-peer node", "instance", n.serverConfig.Name)
 
 	// Otherwise copy and specialize the P2P configuration
+	// 复制服务
 	services := make(map[reflect.Type]Service)
 	for _, constructor := range n.serviceFuncs {
 		// Create a new context for the particular service
@@ -172,20 +182,24 @@ func (n *Node) Start() error {
 			ctx.services[kind] = s
 		}
 		// Construct and save the service
+		// 实例化服务
 		service, err := constructor(ctx)
 		if err != nil {
 			return err
 		}
 		kind := reflect.TypeOf(service)
+		// 服务已存在，抛出异常
 		if _, exists := services[kind]; exists {
 			return &DuplicateServiceError{Kind: kind}
 		}
 		services[kind] = service
 	}
 	// Gather the protocols and start the freshly assembled P2P server
+	// 将服务加入到p2p协议中
 	for _, service := range services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
+	// 绮p2p服务
 	if err := running.Start(); err != nil {
 		return convertFileLockError(err)
 	}
@@ -193,22 +207,28 @@ func (n *Node) Start() error {
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
+		// 启动下一个服务，一旦遇到错误，需停止之前所有已启动的服务
 		if err := service.Start(running); err != nil {
 			for _, kind := range started {
 				services[kind].Stop()
 			}
+			// 停止p2p服务
 			running.Stop()
 
 			return err
 		}
 		// Mark the service started for potential cleanup
+		// 记录已启动的服务
 		started = append(started, kind)
 	}
 	// Lastly start the configured RPC interfaces
+	// 启动RPC服务
 	if err := n.startRPC(services); err != nil {
+		// 如果RPC启动失败，停止之前已启动的服务
 		for _, service := range services {
 			service.Stop()
 		}
+		// 停止 p2p服务
 		running.Stop()
 		return err
 	}
@@ -467,6 +487,7 @@ func (n *Node) stopWS() {
 
 // Stop terminates a running node along with all it's services. In the node was
 // not started, an error is returned.
+// 停止 node 节点 运行，同时停止相关服务
 func (n *Node) Stop() error {
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -477,18 +498,23 @@ func (n *Node) Stop() error {
 	}
 
 	// Terminate the API, services and the p2p server.
+	// 停止 websocket 服务
 	n.stopWS()
+	// 停止 HTTP 服务
 	n.stopHTTP()
+	// 停止 IPC 服务
 	n.stopIPC()
 	n.rpcAPIs = nil
 	failure := &StopError{
 		Services: make(map[reflect.Type]error),
 	}
+	// 停止 之前所有 注册的服务（eth,whisper)
 	for kind, service := range n.services {
 		if err := service.Stop(); err != nil {
 			failure.Services[kind] = err
 		}
 	}
+	// 停止p2p服务
 	n.server.Stop()
 	n.services = nil
 	n.server = nil
