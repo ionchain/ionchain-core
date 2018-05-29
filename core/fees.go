@@ -20,4 +20,5 @@ import (
 	"math/big"
 )
 
+// 区块奖励 5 ether
 var BlockReward = big.NewInt(5e+18)
