@@ -345,6 +345,7 @@ func (self *worker) wait() {
 }
 
 // push sends a new work task to currently live miner agents.
+// 终于找到了，这里是发起挖矿任务的根源
 func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
@@ -483,7 +484,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	// 开始打包区块 从共识引擎中获取区块信息
+	// 开始打包区块 从共识引擎中获取区块信息，将获取的区块赋值给work, work会启动打包任务
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
@@ -493,6 +494,8 @@ func (self *worker) commitNewWork() {
 		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
+
+	//发起一个新的挖矿任务
 	self.push(work)
 }
 

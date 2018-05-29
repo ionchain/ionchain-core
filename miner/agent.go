@@ -49,7 +49,7 @@ func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent
 	return miner
 }
 
-func (self *CpuAgent) Work() chan<- *Work            { return self.workCh }
+func (self *CpuAgent) Work() chan<- *Work            { return self.workCh } //通过嗲用Work() 方法和微机可以和 workCh获取联系
 func (self *CpuAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
 
 func (self *CpuAgent) Stop() {
