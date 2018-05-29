@@ -142,6 +142,7 @@ type Config struct {
 }
 
 // Server manages all peer connections.
+// Server 管理所有peer的连接
 type Server struct {
 	// Config fields may not be modified while the server is running.
 	Config
@@ -185,10 +186,10 @@ type peerDrop struct {
 type connFlag int
 
 const (
-	dynDialedConn connFlag = 1 << iota
-	staticDialedConn
-	inboundConn
-	trustedConn
+	dynDialedConn connFlag = 1 << iota// 动态连接
+	staticDialedConn// 静态节点连接
+	inboundConn// listen 主动连接的节点
+	trustedConn// 可信节点
 )
 
 // conn wraps a network connection with information gathered
@@ -381,6 +382,7 @@ func (srv *Server) Start() (err error) {
 	srv.peerOpDone = make(chan struct{})
 
 	// node table
+	// p2p 网络，DHT
 	if !srv.NoDiscovery {
 		ntab, err := discover.ListenUDP(srv.PrivateKey, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 		if err != nil {
@@ -407,6 +409,7 @@ func (srv *Server) Start() (err error) {
 	if srv.NoDiscovery {
 		dynPeers = 0
 	}
+	// 连接table中的节点，bootstrap,static
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
 
 	// handshake
@@ -415,6 +418,7 @@ func (srv *Server) Start() (err error) {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
 	}
 	// listen/dial
+	// 开始监听
 	if srv.ListenAddr != "" {
 		if err := srv.startListening(); err != nil {
 			return err
@@ -425,6 +429,7 @@ func (srv *Server) Start() (err error) {
 	}
 
 	srv.loopWG.Add(1)
+	// 启动
 	go srv.run(dialer)
 	srv.running = true
 	return nil
@@ -555,6 +560,7 @@ running:
 		case c := <-srv.addpeer:
 			// At this point the connection is past the protocol handshake.
 			// Its capabilities are known and the remote identity is verified.
+			// 此时 connect已经通过握手协议验证
 			err := srv.protoHandshakeChecks(peers, c)
 			if err == nil {
 				// The handshakes are done and it passed all checks.
@@ -698,6 +704,7 @@ func (srv *Server) listenLoop() {
 // SetupConn runs the handshakes and attempts to add the connection
 // as a peer. It returns when the connection has been added as a peer
 // or the handshakes have failed.
+// setupConn 运行握手协议，尝试将connect变成peer。当connect变成peer或握手失败时会返回
 func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Node) {
 	// Prevent leftover pending conns from entering the handshake.
 	srv.lock.Lock()
@@ -710,6 +717,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	// Run the encryption handshake.
 	var err error
+	// 第一次握手
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
 		log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
@@ -728,6 +736,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	// Run the protocol handshake
+	// 第二次握手，返回对方的协议
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)

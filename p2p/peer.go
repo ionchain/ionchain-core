@@ -96,6 +96,7 @@ type PeerEvent struct {
 }
 
 // Peer represents a connected remote node.
+//peer代表了一条创建好的网络链路。在一条链路上可能运行着多个协议。比如以太坊的协议(eth)。 Swarm的协议。 或者是Whisper的协议。
 type Peer struct {
 	rw      *conn
 	running map[string]*protoRW
@@ -318,6 +319,7 @@ outer:
 					offset -= old.Length
 				}
 				// Assign the new match
+				//匹配的协议
 				result[cap.Name] = &protoRW{Protocol: proto, offset: offset, in: make(chan Msg), w: rw}
 				offset += proto.Length
 
@@ -328,6 +330,7 @@ outer:
 	return result
 }
 
+//startProtocols方法，这个方法遍历所有的协议。
 func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error) {
 	p.wg.Add(len(p.running))
 	for _, proto := range p.running {
@@ -341,6 +344,7 @@ func (p *Peer) startProtocols(writeStart <-chan struct{}, writeErr chan<- error)
 		}
 		p.log.Trace(fmt.Sprintf("Starting protocol %s/%d", proto.Name, proto.Version))
 		go func() {
+			// 在go中运行协议
 			err := proto.Run(p, rw)
 			if err == nil {
 				p.log.Trace(fmt.Sprintf("Protocol %s/%d returned", proto.Name, proto.Version))

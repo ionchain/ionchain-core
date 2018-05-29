@@ -232,17 +232,17 @@ func (t *Trie) TryUpdate(key, value []byte) error {
 
 func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error) {
 	if len(key) == 0 {
-		if v, ok := n.(valueNode); ok {
+		if v, ok := n.(valueNode); ok {// 叶子节点
 			return !bytes.Equal(v, value.(valueNode)), value, nil
 		}
 		return true, value, nil
 	}
 	switch n := n.(type) {
 	case *shortNode:
-		matchlen := prefixLen(key, n.Key)
+		matchlen := prefixLen(key, n.Key)// 共享部分
 		// If the whole key matches, keep this short node as is
 		// and only update the value.
-		if matchlen == len(n.Key) {
+		if matchlen == len(n.Key) {// 在扩展节点中的value中直接存储
 			dirty, nn, err := t.insert(n.Val, append(prefix, key[:matchlen]...), key[matchlen:], value)
 			if !dirty || err != nil {
 				return false, n, err
@@ -261,6 +261,7 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 			return false, nil, err
 		}
 		// Replace this shortNode with the branch if it occurs at index 0.
+		// matchlen == 0 表示 在当前扩展节点中没有共享部分，直接返回fullnode
 		if matchlen == 0 {
 			return true, branch, nil
 		}
@@ -277,13 +278,16 @@ func (t *Trie) insert(n node, prefix, key []byte, value node) (bool, node, error
 		n.Children[key[0]] = nn
 		return true, n, nil
 
-	case nil:
+	case nil:// 叶子节点
 		return true, &shortNode{key, value, t.newFlag()}, nil
 
 	case hashNode:
 		// We've hit a part of the trie that isn't loaded yet. Load
 		// the node and insert into it. This leaves all child nodes on
 		// the path to the value in the trie.
+		// hashNode的意思是当前节点还没有加载到内存里面来，还是存放在数据库里面，
+		// 那么首先调用 t.resolveHash(n, prefix)来加载到内存，
+		// 然后对加载出来的节点调用insert方法来进行插入
 		rn, err := t.resolveHash(n, prefix)
 		if err != nil {
 			return false, nil, err
@@ -335,6 +339,7 @@ func (t *Trie) delete(n node, prefix, key []byte) (bool, node, error) {
 		// from the subtrie. Child can never be nil here since the
 		// subtrie must contain at least two other values with keys
 		// longer than n.Key.
+		// key 比 n.key 长，子节点有两种情况：1. fullnode，2. shot
 		dirty, child, err := t.delete(n.Val, append(prefix, key[:len(n.Key)]...), key[len(n.Key):])
 		if !dirty || err != nil {
 			return false, n, err

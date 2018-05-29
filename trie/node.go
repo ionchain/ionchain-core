@@ -38,13 +38,13 @@ type (
 		Children [17]node // Actual trie node data to encode/decode (needs custom encoder)
 		flags    nodeFlag
 	}
-	shortNode struct {
+	shortNode struct {// 既可以是扩展节点，也可是叶子节点，区分：Val的类型 Val.(type) return nil 叶子节点，return shotnode 扩展节点
 		Key   []byte
 		Val   node
 		flags nodeFlag
 	}
-	hashNode  []byte
-	valueNode []byte
+	hashNode  []byte// hashNode是fullNode或者shortNode对象的RLP哈希值
+	valueNode []byte//valueNode就是所携带数据部分的RLP哈希值，长度32byte，数据的RLP编码值作为valueNode的匹配项存储在数据库里
 )
 
 // EncodeRLP encodes a full node into the consensus RLP format.

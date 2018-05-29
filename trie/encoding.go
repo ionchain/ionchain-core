@@ -42,8 +42,8 @@ func hexToCompact(hex []byte) []byte {
 	}
 	buf := make([]byte, len(hex)/2+1)
 	buf[0] = terminator << 5 // the flag byte
-	if len(hex)&1 == 1 {
-		buf[0] |= 1 << 4 // odd flag
+	if len(hex)&1 == 1 {//长度为奇数
+		buf[0] |= 1 << 4 // odd flag	最低位标志奇偶
 		buf[0] |= hex[0] // first nibble is contained in the first byte
 		hex = hex[1:]
 	}

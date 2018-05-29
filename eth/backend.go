@@ -67,24 +67,25 @@ type Ethereum struct {
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
-	txPool          *core.TxPool
-	blockchain      *core.BlockChain
-	protocolManager *ProtocolManager
-	lesServer       LesServer
+	txPool          *core.TxPool	//交易池
+	blockchain      *core.BlockChain	//区块链
+	protocolManager *ProtocolManager	// 协议管理
+	lesServer       LesServer	// 轻节点客户端
 
 	// DB interfaces
+	// leveldb数据库
 	chainDb ethdb.Database // Block chain database
 
 	eventMux       *event.TypeMux
-	engine         consensus.Engine
-	accountManager *accounts.Manager
+	engine         consensus.Engine	//共识引擎
+	accountManager *accounts.Manager	//账户管理
 
 	bloomRequests chan chan *bloombits.Retrieval // Channel receiving bloom data retrieval requests
 	bloomIndexer  *core.ChainIndexer             // Bloom indexer operating during block imports
 
 	ApiBackend *EthApiBackend
 
-	miner     *miner.Miner
+	miner     *miner.Miner	//挖矿
 	gasPrice  *big.Int
 	etherbase common.Address
 
@@ -108,11 +109,12 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
 	}
-	chainDb, err := CreateDB(ctx, config, "chaindata")
+	chainDb, err := CreateDB(ctx, config, "chaindata")		// 创建leveldb数据库
 	if err != nil {
 		return nil, err
 	}
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)
+	stopDbUpgrade := upgradeDeduplicateData(chainDb)	// 数据库格式升级
+	// 设置创世区块。 如果数据库里面已经有创世区块那么从数据库里面取出(私链)。或者是从代码里面获取默认值。
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
@@ -137,7 +139,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 
 	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
+	// 检查数据库里面存储的BlockChainVersion和客户端的BlockChainVersion的版本是否一致
 	if !config.SkipBcVersionCheck {
+		//数据库中的BlockChainVersion
 		bcVersion := core.GetBlockChainVersion(chainDb)
 		if bcVersion != core.BlockChainVersion && bcVersion != 0 {
 			return nil, fmt.Errorf("Blockchain DB version mismatch (%d / %d). Run geth upgradedb.\n", bcVersion, core.BlockChainVersion)
@@ -145,7 +149,9 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 		core.WriteBlockChainVersion(chainDb, core.BlockChainVersion)
 	}
 
+	// vm虚拟机配置
 	vmConfig := vm.Config{EnablePreimageRecording: config.EnablePreimageRecording}
+	//创建区块链 主链
 	eth.blockchain, err = core.NewBlockChain(chainDb, eth.chainConfig, eth.engine, vmConfig)
 	if err != nil {
 		return nil, err
@@ -161,8 +167,10 @@ func New(ctx *node.ServiceContext, config *Config) (*Ethereum, error) {
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = ctx.ResolvePath(config.TxPool.Journal)
 	}
+	//交易池
 	eth.txPool = core.NewTxPool(config.TxPool, eth.chainConfig, eth.blockchain)
 
+	// 创建协议管理器
 	if eth.protocolManager, err = NewProtocolManager(eth.chainConfig, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb); err != nil {
 		return nil, err
 	}

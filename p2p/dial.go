@@ -32,14 +32,17 @@ import (
 const (
 	// This is the amount of time spent waiting in between
 	// redialing a certain node.
+	// 两次连接之间的时间间隔
 	dialHistoryExpiration = 30 * time.Second
 
 	// Discovery lookups are throttled and can only run
 	// once every few seconds.
+	// lookup 时间间隔
 	lookupInterval = 4 * time.Second
 
 	// If no peers are found for this amount of time, the initial bootnodes are
 	// attempted to be connected.
+	//  在fallbackInterval时间内没有找到任何节点，尝试连接bootnode
 	fallbackInterval = 20 * time.Second
 
 	// Endpoint resolution is throttled with bounded backoff.
@@ -68,16 +71,17 @@ func (t TCPDialer) Dial(dest *discover.Node) (net.Conn, error) {
 // dialstate schedules dials and discovery lookups.
 // it get's a chance to compute new tasks on every iteration
 // of the main loop in Server.run.
+// dialstate会按时连接，寻找节点，在server.run的主循环每次重复时，dialstate会有一个执行新任务的机会
 type dialstate struct {
-	maxDynDials int
-	ntab        discoverTable
+	maxDynDials int//最大的动态节点链接数量
+	ntab        discoverTable// 用作节点查询
 	netrestrict *netutil.Netlist
 
 	lookupRunning bool
-	dialing       map[discover.NodeID]connFlag
-	lookupBuf     []*discover.Node // current discovery lookup results
-	randomNodes   []*discover.Node // filled from Table
-	static        map[discover.NodeID]*dialTask
+	dialing       map[discover.NodeID]connFlag //正在连接的节点
+	lookupBuf     []*discover.Node // current discovery lookup results 当前的discovery查询结果
+	randomNodes   []*discover.Node // filled from Table 随机查询的节点
+	static        map[discover.NodeID]*dialTask// 静态的节点
 	hist          *dialHistory
 
 	start     time.Time        // time when the dialer was first used
@@ -93,6 +97,7 @@ type discoverTable interface {
 }
 
 // the dial history remembers recent dials.
+// 最近连接的节点
 type dialHistory []pastDial
 
 // pastDial is an entry in the dial history.
@@ -107,6 +112,7 @@ type task interface {
 
 // A dialTask is generated for each node that is dialed. Its
 // fields cannot be accessed while the task is running.
+// 为每个即将要连接的节点创建一个任务
 type dialTask struct {
 	flags        connFlag
 	dest         *discover.Node
@@ -161,34 +167,40 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 		s.start = now
 	}
 
+	// 待执行的任务
 	var newtasks []task
+	// 是否需要连接，如果可以就加入到连接池中
 	addDial := func(flag connFlag, n *discover.Node) bool {
 		if err := s.checkDial(n, peers); err != nil {
 			log.Trace("Skipping dial candidate", "id", n.ID, "addr", &net.TCPAddr{IP: n.IP, Port: int(n.TCP)}, "err", err)
 			return false
 		}
-		s.dialing[n.ID] = flag
+		s.dialing[n.ID] = flag	// 正在连接
+		// 加入任务池
 		newtasks = append(newtasks, &dialTask{flags: flag, dest: n})
 		return true
 	}
 
 	// Compute number of dynamic dials necessary at this point.
+	// 计算在当前时间点，还需要动态连接的节点数目
 	needDynDials := s.maxDynDials
-	for _, p := range peers {
+	for _, p := range peers {// peers是已经连接的节点
 		if p.rw.is(dynDialedConn) {
 			needDynDials--
 		}
 	}
-	for _, flag := range s.dialing {
+	for _, flag := range s.dialing {// dialing是正在连接的节点
 		if flag&dynDialedConn != 0 {
 			needDynDials--
 		}
 	}
 
 	// Expire the dial history on every invocation.
+	// 在每次请求是，失效连接历史记录
 	s.hist.expire(now)
 
 	// Create dials for static nodes if they are not connected.
+	// 连接静态节点，如果他们还没有创建过连接
 	for id, t := range s.static {
 		err := s.checkDial(t.dest, peers)
 		switch err {
@@ -203,6 +215,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	// If we don't have any peers whatsoever, try to dial a random bootnode. This
 	// scenario is useful for the testnet (and private networks) where the discovery
 	// table might be full of mostly bad peers, making it hard to find good ones.
+	// 如果我们还没有任何节点，尝试连接bootnode，这种场景对 testnet，Private network 非常有用
 	if len(peers) == 0 && len(s.bootnodes) > 0 && needDynDials > 0 && now.Sub(s.start) > fallbackInterval {
 		bootnode := s.bootnodes[0]
 		s.bootnodes = append(s.bootnodes[:0], s.bootnodes[1:]...)
@@ -214,6 +227,7 @@ func (s *dialstate) newTasks(nRunning int, peers map[discover.NodeID]*Peer, now 
 	}
 	// Use random nodes from the table for half of the necessary
 	// dynamic dials.
+	// 从table中找出1/2的随机节点创建连接。
 	randomCandidates := needDynDials / 2
 	if randomCandidates > 0 {
 		n := s.ntab.ReadRandomNodes(s.randomNodes)
@@ -257,19 +271,20 @@ var (
 	errNotWhitelisted   = errors.New("not contained in netrestrict whitelist")
 )
 
+//判断节点n，是否需要创建连接
 func (s *dialstate) checkDial(n *discover.Node, peers map[discover.NodeID]*Peer) error {
 	_, dialing := s.dialing[n.ID]
 	switch {
 	case dialing:
-		return errAlreadyDialing
+		return errAlreadyDialing// 正在连接
 	case peers[n.ID] != nil:
-		return errAlreadyConnected
+		return errAlreadyConnected// 已经连接过
 	case s.ntab != nil && n.ID == s.ntab.Self().ID:
-		return errSelf
+		return errSelf// 不能连接自己
 	case s.netrestrict != nil && !s.netrestrict.Contains(n.IP):
-		return errNotWhitelisted
+		return errNotWhitelisted// 不在白名单中
 	case s.hist.contains(n.ID):
-		return errRecentlyDialed
+		return errRecentlyDialed//最近刚连接过
 	}
 	return nil
 }
@@ -335,6 +350,7 @@ func (t *dialTask) resolve(srv *Server) bool {
 }
 
 // dial performs the actual connection attempt.
+// 正式开始连接节点
 func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 	fd, err := srv.Dialer.Dial(dest)
 	if err != nil {
@@ -342,6 +358,7 @@ func (t *dialTask) dial(srv *Server, dest *discover.Node) bool {
 		return false
 	}
 	mfd := newMeteredConn(fd, false)
+	// 开始执行握手协议，同时将connect加入server peers
 	srv.SetupConn(mfd, t.flags, dest)
 	return true
 }

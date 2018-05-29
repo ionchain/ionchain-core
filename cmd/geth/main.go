@@ -220,8 +220,10 @@ func geth(ctx *cli.Context) error {
 // startNode boots up the system node and all registered protocols, after which
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
+// 启动系统节点和已注册的协议，启动后解锁账号，启动RPC/IPC接口，启动挖矿
 func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start up the node itself
+	// 启动节点
 	utils.StartNode(stack)
 
 	// Unlock any account specifically requested
@@ -231,6 +233,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	unlocks := strings.Split(ctx.GlobalString(utils.UnlockedAccountFlag.Name), ",")
 	for i, account := range unlocks {
 		if trimmed := strings.TrimSpace(account); trimmed != "" {
+			// 解锁账户
 			unlockAccount(ctx, ks, trimmed, i, passwords)
 		}
 	}
@@ -240,6 +243,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 
 	go func() {
 		// Create an chain state reader for self-derivation
+		// rpc 接口
 		rpcClient, err := stack.Attach()
 		if err != nil {
 			utils.Fatalf("Failed to attach to self: %v", err)
@@ -293,6 +297,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 		// Set the gas price to the limits from the CLI and start mining
 		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		// 启动挖矿
 		if err := ethereum.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
