@@ -114,6 +114,7 @@ type Config struct {
 	// Protocols should contain the protocols supported
 	// by the server. Matching protocols are launched for
 	// each peer.
+	//在node 启动的时候注册
 	Protocols []Protocol `toml:"-"`
 
 	// If ListenAddr is set to a non-nil address, the server
@@ -405,6 +406,7 @@ func (srv *Server) Start() (err error) {
 		srv.DiscV5 = ntab
 	}
 
+	// 需要动态连接的 peer数量
 	dynPeers := (srv.MaxPeers + 1) / 2
 	if srv.NoDiscovery {
 		dynPeers = 0
@@ -412,7 +414,7 @@ func (srv *Server) Start() (err error) {
 	// 连接table中的节点，bootstrap,static
 	dialer := newDialState(srv.StaticNodes, srv.BootstrapNodes, srv.ntab, dynPeers, srv.NetRestrict)
 
-	// handshake
+	// handshake 协议包
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
 	for _, p := range srv.Protocols {
 		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
@@ -730,6 +732,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		clog.Trace("Dialed identity mismatch", "want", c, dialDest.ID)
 		return
 	}
+	// 将 conn  加入到 posthandshake中进行下一步处理
 	if err := srv.checkpoint(c, srv.posthandshake); err != nil {
 		clog.Trace("Rejected peer before protocol handshake", "err", err)
 		c.close(err)
