@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/internal/jsre/deps"
+	"github.com/ionchain/ionchain-core/internal/jsre/deps"
 	"github.com/robertkrimen/otto"
 )
 

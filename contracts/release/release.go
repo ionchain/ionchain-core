@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ionchain/ionchain-core/internal/ethapi"
 	"github.com/ethereum/go-ethereum/les"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/node"

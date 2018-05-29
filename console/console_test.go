@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth"
-	"github.com/ethereum/go-ethereum/internal/jsre"
+	"github.com/ionchain/ionchain-core/internal/jsre"
 	"github.com/ethereum/go-ethereum/node"
 )
 

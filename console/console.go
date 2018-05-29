@@ -27,8 +27,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ethereum/go-ethereum/internal/jsre"
-	"github.com/ethereum/go-ethereum/internal/web3ext"
+	"github.com/ionchain/ionchain-core/internal/jsre"
+	"github.com/ionchain/ionchain-core/internal/web3ext"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/mattn/go-colorable"
 	"github.com/peterh/liner"

@@ -27,7 +27,7 @@ import (
 
 	goruntime "runtime"
 
-	"github.com/ethereum/go-ethereum/cmd/evm/internal/compiler"
+	"github.com/ionchain/ionchain-core/cmd/evm/internal/compiler"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
