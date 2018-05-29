@@ -691,6 +691,7 @@ func (srv *Server) listenLoop() {
 			}
 		}
 
+		// 封装统计信息
 		fd = newMeteredConn(fd, true)
 		log.Trace("Accepted connection", "addr", fd.RemoteAddr())
 
@@ -720,6 +721,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	// Run the encryption handshake.
 	var err error
 	// 第一次握手
+	// 通过这个方法来完成交换密钥，创建加密信道的流程。如果失败，那么链接关闭。
 	if c.id, err = c.doEncHandshake(srv.PrivateKey, dialDest); err != nil {
 		log.Trace("Failed RLPx handshake", "addr", c.fd.RemoteAddr(), "conn", c.flags, "err", err)
 		c.close(err)
@@ -740,6 +742,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	}
 	// Run the protocol handshake
 	// 第二次握手，返回对方的协议
+	//这个方法来进行协议特性之间的协商，比如双方的协议版本，是否支持Snappy加密方式等操作。
 	phs, err := c.doProtoHandshake(srv.ourHandshake)
 	if err != nil {
 		clog.Trace("Failed proto handshake", "err", err)
@@ -752,6 +755,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 		return
 	}
 	c.caps, c.name = phs.Caps, phs.Name
+	// 将conn加入到addpeer中进行下一步处理
 	if err := srv.checkpoint(c, srv.addpeer); err != nil {
 		clog.Trace("Rejected peer", "err", err)
 		c.close(err)
@@ -787,6 +791,7 @@ func (srv *Server) checkpoint(c *conn, stage chan<- *conn) error {
 // runPeer runs in its own goroutine for each peer.
 // it waits until the Peer logic returns and removes
 // the peer.
+// 为每个peer运行一个单独的goroutine
 func (srv *Server) runPeer(p *Peer) {
 	if srv.newPeerHook != nil {
 		srv.newPeerHook(p)
@@ -799,6 +804,7 @@ func (srv *Server) runPeer(p *Peer) {
 	})
 
 	// run the protocol
+	//运行协议
 	remoteRequested, err := p.run()
 
 	// broadcast peer drop
