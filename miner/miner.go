@@ -103,7 +103,9 @@ out:
 	}
 }
 
+//开始挖矿
 func (self *Miner) Start(coinbase common.Address) {
+
 	atomic.StoreInt32(&self.shouldStart, 1)
 	self.worker.setEtherbase(coinbase)
 	self.coinbase = coinbase
@@ -115,7 +117,10 @@ func (self *Miner) Start(coinbase common.Address) {
 	atomic.StoreInt32(&self.mining, 1)
 
 	log.Info("Starting mining operation")
+
+	//启动挖矿线程
 	self.worker.start()
+
 	self.worker.commitNewWork()
 }
 

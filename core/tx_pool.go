@@ -554,39 +554,57 @@ func (pool *TxPool) local() map[common.Address]types.Transactions {
 // validateTx checks whether a transaction is valid according to the consensus
 // rules and adheres to some heuristic limits of the local node (price and size).
 func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
+
+
 	// Heuristic limit, reject transactions over 32KB to prevent DOS attacks
+	// 判断交易大小
 	if tx.Size() > 32*1024 {
 		return ErrOversizedData
 	}
+
 	// Transactions can't be negative. This may never happen using RLP decoded
 	// transactions but may occur if you create a transaction using the RPC.
+	// 校验交易签名
 	if tx.Value().Sign() < 0 {
 		return ErrNegativeValue
 	}
+
 	// Ensure the transaction doesn't exceed the current block limit gas.
+	// 确保交易的gs不要超过当前区块链的gas
 	if pool.currentMaxGas.Cmp(tx.Gas()) < 0 {
 		return ErrGasLimit
 	}
 	// Make sure the transaction is signed properly
+	// 发送交易签名，可能是验证用的，具体现在还不是很清楚
 	from, err := types.Sender(pool.signer, tx)
 	if err != nil {
 		return ErrInvalidSender
 	}
 	// Drop non-local transactions under our own minimal accepted gas price
+	// 移除gas价格最低的非本地交易
 	local = local || pool.locals.contains(from) // account may be local even if the transaction arrived from the network
 	if !local && pool.gasPrice.Cmp(tx.GasPrice()) > 0 {
 		return ErrUnderpriced
 	}
+
+
 	// Ensure the transaction adheres to nonce ordering
+	// 暂时没有搞清楚  ？？？？
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
 	}
+
+
 	// Transactor should have enough funds to cover the costs
 	// cost == V + GP * GL
+	//当前账号的余额小于当前账号的gas，则丢弃该交易
 	if pool.currentState.GetBalance(from).Cmp(tx.Cost()) < 0 {
 		return ErrInsufficientFunds
 	}
+
+	//计算当前交易消耗的GAS
 	intrGas := IntrinsicGas(tx.Data(), tx.To() == nil, pool.homestead)
+
 	if tx.Gas().Cmp(intrGas) < 0 {
 		return ErrIntrinsicGas
 	}
@@ -602,19 +620,28 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 // whitelisted, preventing any associated transaction from being dropped out of
 // the pool due to pricing constraints.
 func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
+
+
 	// If the transaction is already known, discard it
+	// 检查交易是否存在
 	hash := tx.Hash()
 	if pool.all[hash] != nil {
 		log.Trace("Discarding already known transaction", "hash", hash)
 		return false, fmt.Errorf("known transaction: %x", hash)
 	}
+
+
 	// If the transaction fails basic validation, discard it
+	// 对交易进行校验
 	if err := pool.validateTx(tx, local); err != nil {
 		log.Trace("Discarding invalid transaction", "hash", hash, "err", err)
 		invalidTxCounter.Inc(1)
 		return false, err
 	}
+
+
 	// If the transaction pool is full, discard underpriced transactions
+	// 如果交易池已经满了，将放弃GAS最低的交易
 	if uint64(len(pool.all)) >= pool.config.GlobalSlots+pool.config.GlobalQueue {
 		// If the new transaction is underpriced, don't accept it
 		if pool.priced.Underpriced(tx, pool.locals) {
@@ -630,10 +657,15 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 			pool.removeTx(tx.Hash())
 		}
 	}
+
+
 	// If the transaction is replacing an already pending one, do directly
+	// 如果交易是待执行的，直接执行
 	from, _ := types.Sender(pool.signer, tx) // already validated
 	if list := pool.pending[from]; list != nil && list.Overlaps(tx) {
+
 		// Nonce already pending, check if required price bump is met
+		// 如果交易对应的Nonce已经在pending队列了,那么产看是否能够替换.
 		inserted, old := list.Add(tx, pool.config.PriceBump)
 		if !inserted {
 			pendingDiscardCounter.Inc(1)
@@ -652,16 +684,22 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 		log.Trace("Pooled new executable transaction", "hash", hash, "from", from, "to", tx.To())
 
 		// We've directly injected a replacement transaction, notify subsystems
+		// 把交易加入到队列,并发送消息告诉所有的订阅者, 这个订阅者在eth协议内部. 会接收这个消息并把这个消息通过网路广播出去()
 		go pool.txFeed.Send(TxPreEvent{tx})
 
 		return old != nil, nil
 	}
+
+
 	// New transaction isn't replacing a pending one, push into queue
 	replace, err := pool.enqueueTx(hash, tx)
 	if err != nil {
 		return false, err
 	}
+
+
 	// Mark local addresses and journal local transactions
+	// 标记本地地址和日志本地事务
 	if local {
 		pool.locals.add(from)
 	}
@@ -750,6 +788,7 @@ func (pool *TxPool) promoteTx(addr common.Address, hash common.Hash, tx *types.T
 // AddLocal enqueues a single transaction into the pool if it is valid, marking
 // the sender as a local one in the mean time, ensuring it goes around the local
 // pricing constraints.
+// 本地节点产生的交易
 func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 	return pool.addTx(tx, !pool.config.NoLocals)
 }
@@ -757,6 +796,7 @@ func (pool *TxPool) AddLocal(tx *types.Transaction) error {
 // AddRemote enqueues a single transaction into the pool if it is valid. If the
 // sender is not among the locally tracked ones, full pricing constraints will
 // apply.
+//加入其他节点发送的交易
 func (pool *TxPool) AddRemote(tx *types.Transaction) error {
 	return pool.addTx(tx, false)
 }
@@ -771,9 +811,11 @@ func (pool *TxPool) AddLocals(txs []*types.Transaction) []error {
 // AddRemotes enqueues a batch of transactions into the pool if they are valid.
 // If the senders are not among the locally tracked ones, full pricing constraints
 // will apply.
+//将其他节点批量交易发送到交易池中
 func (pool *TxPool) AddRemotes(txs []*types.Transaction) []error {
 	return pool.addTxs(txs, false)
 }
+
 
 // addTx enqueues a single transaction into the pool if it is valid.
 func (pool *TxPool) addTx(tx *types.Transaction, local bool) error {

@@ -282,13 +282,19 @@ func (f *Fetcher) loop() {
 	completeTimer := time.NewTimer(0)
 
 	for {
+
+
 		// Clean up any expired block fetches
+		// 对应白皮书中的第一步
 		for hash, announce := range f.fetching {
 			if time.Since(announce.time) > fetchTimeout {
 				f.forgetHash(hash)
 			}
 		}
+
+
 		// Import any queued blocks that could potentially fit
+		//对应白皮书的第二步
 		height := f.chainHeight()
 		for !f.queue.Empty() {
 			op := f.queue.PopItem().(*inject)

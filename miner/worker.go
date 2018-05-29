@@ -95,8 +95,8 @@ type worker struct {
 
 	// update loop
 	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent
-	txSub        event.Subscription
+	txCh         chan core.TxPreEvent  //用来接受txPool里面的交易的通道
+	txSub        event.Subscription   //用来接受txPool里面的交易的订阅器
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
 	chainSideCh  chan core.ChainSideEvent
@@ -145,7 +145,9 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 	}
+
 	// Subscribe TxPreEvent for tx pool
+	// 订阅交易池的交易相关的事件
 	worker.txSub = eth.TxPool().SubscribeTxPreEvent(worker.txCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
@@ -200,6 +202,7 @@ func (self *worker) pendingBlock() *types.Block {
 	return self.current.Block
 }
 
+// 启动挖矿线程
 func (self *worker) start() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -480,6 +483,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
+	// 开始打包区块 从共识引擎中获取区块信息
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
