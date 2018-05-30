@@ -201,13 +201,16 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			delete(snap.Recents, number-limit)
 		}
 		// Resolve the authorization key and check against signers
+		// 从head中取出签名者信息
 		signer, err := ecrecover(header, s.sigcache)
 		if err != nil {
 			return nil, err
 		}
+		// 判断是否已被授权
 		if _, ok := snap.Signers[signer]; !ok {
 			return nil, errUnauthorized
 		}
+		// 判断是否最近已经签名过区块
 		for _, recent := range snap.Recents {
 			if recent == signer {
 				return nil, errUnauthorized
@@ -227,6 +230,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			}
 		}
 		// Tally up the new vote from the signer
+		// 通过对coinbase 投票授权决定，是否加入一个新的投票者
 		var authorize bool
 		switch {
 		case bytes.Equal(header.Nonce[:], nonceAuthVote):
@@ -245,6 +249,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 			})
 		}
 		// If the vote passed, update the list of signers
+		// 获得超过一般节点的投票
 		if tally := snap.Tally[header.Coinbase]; tally.Votes > len(snap.Signers)/2 {
 			if tally.Authorize {
 				snap.Signers[header.Coinbase] = struct{}{}
@@ -285,6 +290,7 @@ func (s *Snapshot) apply(headers []*types.Header) (*Snapshot, error) {
 }
 
 // signers retrieves the list of authorized signers in ascending order.
+// 升序返回 所有已授权的签名者信息
 func (s *Snapshot) signers() []common.Address {
 	signers := make([]common.Address, 0, len(s.Signers))
 	for signer := range s.Signers {

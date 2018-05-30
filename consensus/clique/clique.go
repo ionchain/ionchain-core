@@ -159,7 +159,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 		header.GasLimit,
 		header.GasUsed,
 		header.Time,
-		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short
+		header.Extra[:len(header.Extra)-65], // Yes, this will panic if extra is too short 至少65个字节
 		header.MixDigest,
 		header.Nonce,
 	})
@@ -175,20 +175,20 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return address.(common.Address), nil
 	}
 	// Retrieve the signature from the header extra-data
-	if len(header.Extra) < extraSeal {
+	if len(header.Extra) < extraSeal { // 小于65字节，表示没有签名信息
 		return common.Address{}, errMissingSignature
 	}
-	signature := header.Extra[len(header.Extra)-extraSeal:]
+	signature := header.Extra[len(header.Extra)-extraSeal:] // 取出区块签名信息
 
 	// Recover the public key and the Ethereum address
-	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature)
+	pubkey, err := crypto.Ecrecover(sigHash(header).Bytes(), signature) // 从签名信息中恢复出公钥
 	if err != nil {
 		return common.Address{}, err
 	}
 	var signer common.Address
-	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
+	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:]) // 签名公钥的地址
 
-	sigcache.Add(hash, signer)
+	sigcache.Add(hash, signer) // 区块头hash，签名公钥的地址 加入到缓存中
 	return signer, nil
 }
 
@@ -198,12 +198,12 @@ type Clique struct {
 	config *params.CliqueConfig // Consensus engine configuration parameters
 	db     ethdb.Database       // Database to store and retrieve snapshot checkpoints
 
-	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs
-	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining
+	recents    *lru.ARCCache // Snapshots for recent block to speed up reorgs 最近区块的快照，加速区块重组
+	signatures *lru.ARCCache // Signatures of recent blocks to speed up mining 最近区块的签名，加快区块挖矿
 
-	proposals map[common.Address]bool // Current list of proposals we are pushing
+	proposals map[common.Address]bool // Current list of proposals we are pushing  最近提交的提案信息
 
-	signer common.Address // Ethereum address of the signing key
+	signer common.Address // Ethereum address of the signing key 签名的地址
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 }
@@ -231,6 +231,7 @@ func New(config *params.CliqueConfig, db ethdb.Database) *Clique {
 
 // Author implements consensus.Engine, returning the Ethereum address recovered
 // from the signature in the header's extra-data section.
+// 解析在区块头extra-data中的签名信息
 func (c *Clique) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header, c.signatures)
 }
@@ -376,6 +377,7 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 	)
 	for snap == nil {
 		// If an in-memory snapshot was found, use that
+		// 如果在内存中找到区块
 		if s, ok := c.recents.Get(hash); ok {
 			snap = s.(*Snapshot)
 			break
@@ -394,11 +396,14 @@ func (c *Clique) snapshot(chain consensus.ChainReader, number uint64, hash commo
 			if err := c.VerifyHeader(chain, genesis, false); err != nil {
 				return nil, err
 			}
+			//区块中签名者的信息
 			signers := make([]common.Address, (len(genesis.Extra)-extraVanity-extraSeal)/common.AddressLength)
 			for i := 0; i < len(signers); i++ {
 				copy(signers[i][:], genesis.Extra[extraVanity+i*common.AddressLength:])
 			}
+			// 生成快照
 			snap = newSnapshot(c.config, c.signatures, 0, genesis.Hash(), signers)
+			// 将快照存储到数据库中
 			if err := snap.store(c.db); err != nil {
 				return nil, err
 			}
@@ -611,6 +616,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	c.lock.RUnlock()
 
 	// Bail out if we're unauthorized to sign a block
+	// 如果我们没有被授权签名一个区块，直接跳出
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return nil, err
@@ -619,6 +625,7 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 		return nil, errUnauthorized
 	}
 	// If we're amongst the recent signers, wait for the next block
+	// 如果我们最近已经签名过一次区块，那么等待下一轮
 	for seen, recent := range snap.Recents {
 		if recent == signer {
 			// Signer is among recents, only wait if the current block doesn't shift it out
@@ -643,9 +650,10 @@ func (c *Clique) Seal(chain consensus.ChainReader, block *types.Block, stop <-ch
 	select {
 	case <-stop:
 		return nil, nil
-	case <-time.After(delay):
+	case <-time.After(delay): // 等待delay超时
 	}
 	// Sign all the things!
+	//签名区块头
 	sighash, err := signFn(accounts.Account{Address: signer}, sigHash(header).Bytes())
 	if err != nil {
 		return nil, err

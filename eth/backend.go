@@ -336,6 +336,7 @@ func (s *Ethereum) StartMining(local bool) error {
 		log.Error("Cannot start mining without etherbase", "err", err)
 		return fmt.Errorf("etherbase missing: %v", err)
 	}
+	// 如果是POA共识算法
 	if clique, ok := s.engine.(*clique.Clique); ok {
 		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 		if wallet == nil || err != nil {
