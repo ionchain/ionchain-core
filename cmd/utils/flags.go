@@ -967,9 +967,9 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *eth.Config) {
 	case ctx.GlobalIsSet(SyncModeFlag.Name):
 		cfg.SyncMode = *GlobalTextMarshaler(ctx, SyncModeFlag.Name).(*downloader.SyncMode)
 	case ctx.GlobalBool(FastSyncFlag.Name):
-		cfg.SyncMode = downloader.FastSync
+		cfg.SyncMode = downloader.FastSync // 快速同步
 	case ctx.GlobalBool(LightModeFlag.Name):
-		cfg.SyncMode = downloader.LightSync
+		cfg.SyncMode = downloader.LightSync // 轻同步
 	}
 	if ctx.GlobalIsSet(LightServFlag.Name) {
 		cfg.LightServ = ctx.GlobalInt(LightServFlag.Name)

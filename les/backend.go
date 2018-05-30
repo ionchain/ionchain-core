@@ -78,10 +78,12 @@ type LightEthereum struct {
 }
 
 func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
+	// 轻节点的leveldb数据库文件
 	chainDb, err := eth.CreateDB(ctx, config, "lightchaindata")
 	if err != nil {
 		return nil, err
 	}
+	// 创世快
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, isCompat := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !isCompat {
 		return nil, genesisErr
@@ -91,6 +93,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	peers := newPeerSet()
 	quitSync := make(chan struct{})
 
+	// 轻节点eth协议
 	leth := &LightEthereum{
 		chainConfig:      chainConfig,
 		chainDb:          chainDb,
@@ -111,6 +114,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	leth.serverPool = newServerPool(chainDb, quitSync, &leth.wg)
 	leth.retriever = newRetrieveManager(peers, leth.reqDist, leth.serverPool)
 	leth.odr = NewLesOdr(chainDb, leth.chtIndexer, leth.bloomTrieIndexer, leth.bloomIndexer, leth.retriever)
+	// 区块链的逻辑结构
 	if leth.blockchain, err = light.NewLightChain(leth.odr, leth.chainConfig, leth.engine); err != nil {
 		return nil, err
 	}
@@ -123,6 +127,7 @@ func New(ctx *node.ServiceContext, config *eth.Config) (*LightEthereum, error) {
 	}
 
 	leth.txPool = light.NewTxPool(leth.chainConfig, leth.blockchain, leth.relay)
+	// p2p 协议管理器
 	if leth.protocolManager, err = NewProtocolManager(leth.chainConfig, true, ClientProtocolVersions, config.NetworkId, leth.eventMux, leth.engine, leth.peers, leth.blockchain, nil, chainDb, leth.odr, leth.relay, quitSync, &leth.wg); err != nil {
 		return nil, err
 	}

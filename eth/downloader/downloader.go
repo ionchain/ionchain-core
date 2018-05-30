@@ -228,8 +228,8 @@ func New(mode SyncMode, stateDb ethdb.Database, mux *event.TypeMux, chain BlockC
 		stateSyncStart: make(chan *stateSync),
 		trackStateReq:  make(chan *stateReq),
 	}
-	go dl.qosTuner()
-	go dl.stateFetcher()
+	go dl.qosTuner()	//简单 主要用来计算rttEstimate和rttConfidence
+	go dl.stateFetcher()//启动stateFetcher的任务监听，但是这个时候还没有生成state fetcher的任务。
 	return dl
 }
 
@@ -247,11 +247,11 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 
 	current := uint64(0)
 	switch d.mode {
-	case FullSync:
+	case FullSync: // 全同步
 		current = d.blockchain.CurrentBlock().NumberU64()
-	case FastSync:
+	case FastSync: // 快速同步
 		current = d.blockchain.CurrentFastBlock().NumberU64()
-	case LightSync:
+	case LightSync: // 轻节点同步
 		current = d.lightchain.CurrentHeader().Number.Uint64()
 	}
 	return ethereum.SyncProgress{

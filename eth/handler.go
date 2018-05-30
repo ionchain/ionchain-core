@@ -215,6 +215,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 	go pm.minedBroadcastLoop()
 
 	// start sync handlers
+	// 同步
 	go pm.syncer()
 	go pm.txsyncLoop()
 }
@@ -725,7 +726,7 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 // Mined broadcast loop
 func (self *ProtocolManager) minedBroadcastLoop() {
 	// automatically stops if unsubscribe
-	for obj := range self.minedBlockSub.Chan() {
+	for obj := range self.minedBlockSub.Chan() { //订阅 minedblock事件
 		switch ev := obj.Data.(type) {
 		case core.NewMinedBlockEvent:
 			self.BroadcastBlock(ev.Block, true)  // First propagate block to peers

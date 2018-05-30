@@ -92,7 +92,7 @@ out:
 			//启动挖矿线程
 			go self.mine(work, self.quitCurrentOp)
 			self.mu.Unlock()
-		case <-self.stop:
+		case <-self.stop: // 收到停止挖矿的信号
 			self.mu.Lock()
 			if self.quitCurrentOp != nil {
 				close(self.quitCurrentOp)
@@ -107,6 +107,7 @@ out:
 // 开始挖矿
 func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
 
+	// 填充区块头：ethash共识寻找nonce，poa共识 签名区块头
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
 		log.Info("Successfully sealed new block", "number", result.Number(), "hash", result.Hash())
 		self.returnCh <- &Result{work, result}

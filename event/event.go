@@ -40,8 +40,8 @@ type TypeMuxEvent struct {
 // Deprecated: use Feed
 type TypeMux struct {
 	mutex   sync.RWMutex
-	subm    map[reflect.Type][]*TypeMuxSubscription
-	stopped bool
+	subm    map[reflect.Type][]*TypeMuxSubscription // 事件与处理方法映射
+	stopped bool	// 是否停止标志
 }
 
 // ErrMuxClosed is returned when Posting on a closed TypeMux.
@@ -51,7 +51,7 @@ var ErrMuxClosed = errors.New("event: mux closed")
 // subscription's channel is closed when it is unsubscribed
 // or the mux is closed.
 func (mux *TypeMux) Subscribe(types ...interface{}) *TypeMuxSubscription {
-	sub := newsub(mux)
+	sub := newsub(mux) // 创建事件通道
 	mux.mutex.Lock()
 	defer mux.mutex.Unlock()
 	if mux.stopped {
@@ -64,12 +64,12 @@ func (mux *TypeMux) Subscribe(types ...interface{}) *TypeMuxSubscription {
 			mux.subm = make(map[reflect.Type][]*TypeMuxSubscription)
 		}
 		for _, t := range types {
-			rtyp := reflect.TypeOf(t)
-			oldsubs := mux.subm[rtyp]
-			if find(oldsubs, sub) != -1 {
+			rtyp := reflect.TypeOf(t) // 订阅事件的类型
+			oldsubs := mux.subm[rtyp] // 已有的事件类型
+			if find(oldsubs, sub) != -1 { //查看是否重复
 				panic(fmt.Sprintf("event: duplicate type %s in Subscribe", rtyp))
 			}
-			subs := make([]*TypeMuxSubscription, len(oldsubs)+1)
+			subs := make([]*TypeMuxSubscription, len(oldsubs)+1) // 添加新的事件
 			copy(subs, oldsubs)
 			subs[len(oldsubs)] = sub
 			mux.subm[rtyp] = subs
@@ -161,7 +161,7 @@ type TypeMuxSubscription struct {
 }
 
 func newsub(mux *TypeMux) *TypeMuxSubscription {
-	c := make(chan *TypeMuxEvent)
+	c := make(chan *TypeMuxEvent) // 事件通道
 	return &TypeMuxSubscription{
 		mux:     mux,
 		created: time.Now(),
