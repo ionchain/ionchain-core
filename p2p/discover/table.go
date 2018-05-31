@@ -89,6 +89,7 @@ type transport interface {
 
 // bucket contains nodes, ordered by their last activity. the entry
 // that was most recently active is the first element in entries.
+// bucket 中包含node，node按他们最近的活跃程度排序的。最近最活跃的节点排第一个
 type bucket struct{ entries []*Node }
 
 func newTable(t transport, ourID NodeID, ourAddr *net.UDPAddr, nodeDBPath string) (*Table, error) {
@@ -132,6 +133,7 @@ func (tab *Table) ReadRandomNodes(buf []*Node) (n int) {
 	// TODO: tree-based buckets would help here
 	// Find all non-empty buckets and get a fresh slice of their entries.
 	var buckets [][]*Node
+	// 所有的bucket
 	for _, b := range tab.buckets {
 		if len(b.entries) > 0 {
 			buckets = append(buckets, b.entries[:])
@@ -141,6 +143,7 @@ func (tab *Table) ReadRandomNodes(buf []*Node) (n int) {
 		return 0
 	}
 	// Shuffle the buckets.
+	// 对bucket进行洗牌
 	for i := uint32(len(buckets)) - 1; i > 0; i-- {
 		j := randUint(i)
 		buckets[i], buckets[j] = buckets[j], buckets[i]
@@ -205,6 +208,7 @@ func (tab *Table) SetFallbackNodes(nodes []*Node) error {
 
 // Resolve searches for a specific node with the given ID.
 // It returns nil if the node could not be found.
+// Resolve 通过 targetID查找node，如果没有找到相关node返回nil
 func (tab *Table) Resolve(targetID NodeID) *Node {
 	// If the node is present in the local table, no
 	// network interaction is required.
@@ -315,6 +319,11 @@ func (tab *Table) refresh() <-chan struct{} {
 }
 
 // refreshLoop schedules doRefresh runs and coordinates shutdown.
+/**
+	1. 每一个小时进行一次刷新工作(autoRefreshInterval)
+	2. 如果接收到refreshReq请求。那么进行刷新工作。
+	3. 如果接收到关闭消息。那么进行关闭。
+ */
 func (tab *Table) refreshLoop() {
 	var (
 		timer   = time.NewTicker(autoRefreshInterval)
@@ -327,12 +336,14 @@ loop:
 		case <-timer.C:
 			if done == nil {
 				done = make(chan struct{})
+				// 超时后重新刷新table
 				go tab.doRefresh(done)
 			}
 		case req := <-tab.refreshReq:
 			waiting = append(waiting, req)
 			if done == nil {
 				done = make(chan struct{})
+				// 强制刷新
 				go tab.doRefresh(done)
 			}
 		case <-done:
@@ -362,6 +373,7 @@ loop:
 // doRefresh performs a lookup for a random target to keep buckets
 // full. seed nodes are inserted if the table is empty (initial
 // bootstrap or discarded faulty peers).
+// 寻找随机目标，填充bucket，当table是空的，插入种子节点-bootstrap node
 func (tab *Table) doRefresh(done chan struct{}) {
 	defer close(done)
 
@@ -371,8 +383,13 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// (not hash-sized) and it is not easily possible to generate a
 	// sha3 preimage that falls into a chosen bucket.
 	// We perform a lookup with a random target instead.
+
+	// Kademlia 论文中指明：刷新bucket是，应该在最近使用过的bucket中查找。
+	// 我们不能遵循这个标准，1. 目标数量巨大，有512bit
+	// 所以我们这里查找随机节点
 	var target NodeID
 	rand.Read(target[:])
+	// 查找随机目标
 	result := tab.lookup(target, false)
 	if len(result) > 0 {
 		return
@@ -381,7 +398,9 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	// The table is empty. Load nodes from the database and insert
 	// them. This should yield a few previously seen nodes that are
 	// (hopefully) still alive.
+	// 如果table为空，从本地数据库中查找节点，并插入table中。
 	seeds := tab.db.querySeeds(seedCount, seedMaxAge)
+	// 插入bootstrap 节点
 	seeds = tab.bondall(append(seeds, tab.nursery...))
 
 	if len(seeds) == 0 {
@@ -396,6 +415,7 @@ func (tab *Table) doRefresh(done chan struct{}) {
 	tab.mutex.Unlock()
 
 	// Finally, do a self lookup to fill up the buckets.
+	// 最后，以自身为目标
 	tab.lookup(tab.self.ID, false)
 }
 
@@ -423,6 +443,7 @@ func (tab *Table) len() (n int) {
 
 // bondall bonds with all given nodes concurrently and returns
 // those nodes for which bonding has probably succeeded.
+// 并发绑定给定的节点，返回绑定成功的节点
 func (tab *Table) bondall(nodes []*Node) (result []*Node) {
 	rc := make(chan *Node, len(nodes))
 	for i := range nodes {
@@ -498,6 +519,7 @@ func (tab *Table) bond(pinged bool, id NodeID, addr *net.UDPAddr, tcpPort uint16
 		// Add the node to the table even if the bonding ping/pong
 		// fails. It will be relaced quickly if it continues to be
 		// unresponsive.
+		// 无论node是否响应ping/pong 都加入到table中，如果这个node持续不响应，它会很快被替代掉
 		tab.add(node)
 		tab.db.updateFindFails(id, 0)
 	}
@@ -521,6 +543,7 @@ func (tab *Table) pingpong(w *bondproc, pinged bool, id NodeID, addr *net.UDPAdd
 		tab.net.waitping(id)
 	}
 	// Bonding succeeded, update the node database.
+	// 绑定成功，更新node 数据库
 	w.n = NewNode(id, addr.IP, uint16(addr.Port), tcpPort)
 	tab.db.updateNode(w.n)
 	close(w.done)
@@ -550,7 +573,10 @@ func (tab *Table) ping(id NodeID, addr *net.UDPAddr) error {
 // the bucket does not respond to a ping packet.
 //
 // The caller must not hold tab.mutex.
+// 尝试加入给定的节点到相关的bucket中，如果这个bucket还有可用空间，那么立刻加入成功。
+// 否则bucket已满，那么bucket中最近最少活跃的节点没有响应ping，那么node加入成功
 func (tab *Table) add(new *Node) {
+	// 计算出 与new node相关的bucket
 	b := tab.buckets[logdist(tab.self.sha, new.sha)]
 	tab.mutex.Lock()
 	defer tab.mutex.Unlock()

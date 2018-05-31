@@ -68,28 +68,34 @@ const (
 // RPC request structures
 type (
 	ping struct {
-		Version    uint
-		From, To   rpcEndpoint
-		Expiration uint64
+		Version    uint//协议版本
+		From, To   rpcEndpoint//源IP地址 目的IP地址
+		Expiration uint64//超时时间
 		// Ignore additional fields (for forward compatibility).
-		Rest []rlp.RawValue `rlp:"tail"`
+		Rest []rlp.RawValue `rlp:"tail"`//可以忽略的字段。 为了向前兼容
 	}
 
 	// pong is the reply to ping.
+	// ping包的回应
 	pong struct {
 		// This field should mirror the UDP envelope address
 		// of the ping packet, which provides a way to discover the
 		// the external address (after NAT).
+		// 目的IP地址
 		To rpcEndpoint
 
+		// 说明这个pong包是回应那个ping包的。 包含了ping包的hash值
 		ReplyTok   []byte // This contains the hash of the ping packet.
+		//包超时的绝对时间。 如果收到包的时候超过了这个时间，那么包被认为是超时的。
 		Expiration uint64 // Absolute timestamp at which the packet becomes invalid.
 		// Ignore additional fields (for forward compatibility).
 		Rest []rlp.RawValue `rlp:"tail"`
 	}
 
 	// findnode is a query for nodes close to the given target.
+	// findnode 是用来查询距离target比较近的节点
 	findnode struct {
+		// 目的节点
 		Target     NodeID // doesn't need to be an actual public key
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
@@ -97,7 +103,9 @@ type (
 	}
 
 	// reply to findnode
+	// findnode的回应
 	neighbors struct {
+		//距离target比较近的节点值。
 		Nodes      []rpcNode
 		Expiration uint64
 		// Ignore additional fields (for forward compatibility).
@@ -159,15 +167,15 @@ type conn interface {
 
 // udp implements the RPC protocol.
 type udp struct {
-	conn        conn
+	conn        conn//网络连接
 	netrestrict *netutil.Netlist
-	priv        *ecdsa.PrivateKey
+	priv        *ecdsa.PrivateKey//私钥，自己的ID是通过这个来生成的。
 	ourEndpoint rpcEndpoint
 
-	addpending chan *pending
-	gotreply   chan reply
+	addpending chan *pending//用来申请一个pending
+	gotreply   chan reply//用来获取回应的队列
 
-	closing chan struct{}
+	closing chan struct{}//用来关闭的队列
 	nat     nat.Interface
 
 	*Table
@@ -182,6 +190,8 @@ type udp struct {
 // our implementation handles this by storing a callback function for
 // each pending reply. incoming packets from a node are dispatched
 // to all the callback functions for that node.
+
+// pending 表示一个pending reply
 type pending struct {
 	// these fields must match in the reply.
 	from  NodeID
@@ -374,6 +384,7 @@ func (t *udp) loop() {
 
 		select {
 		case <-t.closing:
+			//  关闭
 			for el := plist.Front(); el != nil; el = el.Next() {
 				el.Value.(*pending).errc <- errClosed
 			}
@@ -469,6 +480,13 @@ func (t *udp) send(toaddr *net.UDPAddr, ptype byte, req packet) error {
 	return err
 }
 
+//discover协议因为没有承载什么敏感数据，所以数据是以明文传输，
+// 但是为了确保数据的完整性和不被篡改，所以在数据包的包头加上了数字签名。
+/**
+|____________________________
+|macSize|sigSize|package data|
+|___32__|___32__|____________|
+ */
 func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) ([]byte, error) {
 	b := new(bytes.Buffer)
 	b.Write(headSpace)
@@ -478,15 +496,18 @@ func encodePacket(priv *ecdsa.PrivateKey, ptype byte, req interface{}) ([]byte, 
 		return nil, err
 	}
 	packet := b.Bytes()
+	// 对packet数据进行签名，放入sigSize部分
 	sig, err := crypto.Sign(crypto.Keccak256(packet[headSize:]), priv)
 	if err != nil {
 		log.Error("Can't sign discv4 packet", "err", err)
 		return nil, err
 	}
+	// 将签名放入签名位
 	copy(packet[macSize:], sig)
 	// add the hash to the front. Note: this doesn't protect the
 	// packet in any way. Our public key will be part of this hash in
 	// The future.
+	// sigSize+packetData 的hash值放入头部=MacSize，用于校验
 	copy(packet, crypto.Keccak256(packet[macSize:]))
 	return packet, nil
 }
@@ -524,6 +545,7 @@ func (t *udp) handlePacket(from *net.UDPAddr, buf []byte) error {
 	return err
 }
 
+// 解析返回的package
 func decodePacket(buf []byte) (packet, NodeID, []byte, error) {
 	if len(buf) < headSize+1 {
 		return nil, NodeID{}, nil, errPacketTooSmall
