@@ -32,6 +32,9 @@ var errBadChannel = errors.New("event: Subscribe argument does not have sendable
 // match.
 //
 // The zero value is ready to use.
+//目前主要使用的对象。取代了前面说的event.go内部的TypeMux
+// Feed 实现了 1对多的订阅模式，使用了channel来传递事件。 发送给Feed的值会同时被传递给所有订阅的channel。
+// Feed只能被单个类型使用。这个和之前的event不同，event可以使用多个类型。 类型被第一个Send调用或者是Subscribe调用决定。 后续的调用如果类型和其不一致会panic
 type Feed struct {
 	once      sync.Once        // ensures that init only runs once
 	sendLock  chan struct{}    // sendLock has a one-element buffer and is empty when held.It protects sendCases.
