@@ -160,8 +160,11 @@ func (api *PrivateMinerAPI) Start(threads *int) error {
 		price := api.e.gasPrice
 		api.e.lock.RUnlock()
 
+		//设置当前教程的gas价格
 		api.e.txPool.SetGasPrice(price)
 		return api.e.StartMining(true)
+
+
 	}
 	return nil
 }
