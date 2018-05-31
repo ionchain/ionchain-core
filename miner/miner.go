@@ -62,10 +62,10 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		eth:      eth,
 		mux:      mux,
 		engine:   engine,
-		worker:   newWorker(config, engine, common.Address{}, eth, mux),
+		worker:   newWorker(config, engine, common.Address{}, eth, mux), //新建worker
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine))
+	miner.Register(NewCpuAgent(eth.BlockChain(), engine)) // 向worker中注册agent
 	go miner.update()
 
 	return miner
@@ -75,7 +75,10 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 // It's entered once and as soon as `Done` or `Failed` has been broadcasted the events are unregistered and
 // the loop is exited. This to prevent a major security vuln where external parties can DOS you with blocks
 // and halt your mining operation for as long as the DOS continues.
+//update订阅了downloader的事件， 注意这个goroutine是一个一次性的循环， 只要接收到一次downloader的downloader.DoneEvent或者
+// downloader.FailedEvent事件， 就会设置canStart为1. 并退出循环， 这是为了避免黑客恶意的 DOS攻击，让你不断的处于异常状态
 func (self *Miner) update() {
+	// 订阅 downloader.StartEvent,downloader.DoneEvent,downloader.FailedEvent 事件
 	events := self.mux.Subscribe(downloader.StartEvent{}, downloader.DoneEvent{}, downloader.FailedEvent{})
 out:
 	for ev := range events.Chan() {
@@ -93,6 +96,7 @@ out:
 			atomic.StoreInt32(&self.canStart, 1)
 			atomic.StoreInt32(&self.shouldStart, 0)
 			if shouldStart {
+				// miner.start
 				self.Start(self.coinbase)
 			}
 			// unsubscribe. we're only interested in this event once
@@ -121,6 +125,7 @@ func (self *Miner) Start(coinbase common.Address) {
 	//启动挖矿线程
 	self.worker.start()
 
+	// 提交work
 	self.worker.commitNewWork()
 }
 

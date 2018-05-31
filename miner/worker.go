@@ -104,7 +104,7 @@ type worker struct {
 	wg           sync.WaitGroup
 
 	agents map[Agent]struct{}
-	recv   chan *Result
+	recv   chan *Result // 如果成功挖出区块，放入这个通道中
 
 	eth     Backend
 	chain   *core.BlockChain
@@ -152,9 +152,14 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+
+	// 收集并执行交易，提交新的work给agent
 	go worker.update()
 
+	// 将刚挖出的区块写入本地链中，并追踪刚挖出的区块，等6个以上的区块确认
 	go worker.wait()
+
+	// 刚启动是 提交新的work（miner.start()中也会调用一次，刚启动时 会调用两次这个方法）
 	worker.commitNewWork()
 
 	return worker
@@ -211,6 +216,7 @@ func (self *worker) start() {
 
 	// spin up agents
 	for agent := range self.agents {
+		// 由agent代理挖矿--寻找nonce
 		agent.Start()
 	}
 }
@@ -253,10 +259,11 @@ func (self *worker) update() {
 		select {
 		// Handle ChainHeadEvent
 		case <-self.chainHeadCh:
+			// 提交新的work给agent挖矿
 			self.commitNewWork()
 
 		// Handle ChainSideEvent
-		case ev := <-self.chainSideCh:
+		case ev := <-self.chainSideCh: // 分叉链
 			self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
@@ -264,17 +271,18 @@ func (self *worker) update() {
 		// Handle TxPreEvent
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
-			if atomic.LoadInt32(&self.mining) == 0 {
+			if atomic.LoadInt32(&self.mining) == 0 { // 还没开始挖矿
 				self.currentMu.Lock()
 				acc, _ := types.Sender(self.current.signer, ev.Tx)
 				txs := map[common.Address]types.Transactions{acc: {ev.Tx}}
 				txset := types.NewTransactionsByPriceAndNonce(self.current.signer, txs)
 
+				// 执行交易
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.currentMu.Unlock()
 			} else {
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 {
+				if self.config.Clique != nil && self.config.Clique.Period == 0 { // 如果是POA算法
 					self.commitNewWork()
 				}
 			}
@@ -293,7 +301,7 @@ func (self *worker) update() {
 func (self *worker) wait() {
 	for {
 		mustCommitNewWork := true
-		for result := range self.recv {
+		for result := range self.recv { // 查看成功挖出的区块
 			atomic.AddInt32(&self.atWork, -1)
 
 			if result == nil {
@@ -312,6 +320,7 @@ func (self *worker) wait() {
 			for _, log := range work.state.Logs() {
 				log.BlockHash = block.Hash()
 			}
+			// 将挖出的区块写入到本地链上
 			stat, err := self.chain.WriteBlockAndState(block, work.receipts, work.state)
 			if err != nil {
 				log.Error("Failed writing block to chain", "err", err)
@@ -336,6 +345,7 @@ func (self *worker) wait() {
 			self.chain.PostChainEvents(events, logs)
 
 			// Insert the block into the set of pending ones to wait for confirmations
+			// 追踪刚挖出的区块
 			self.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
 			if mustCommitNewWork {
@@ -347,6 +357,7 @@ func (self *worker) wait() {
 
 // push sends a new work task to currently live miner agents.
 // 终于找到了，这里是发起挖矿任务的根源
+// 封装好的区块，交给agent 完成nonce 封装
 func (self *worker) push(work *Work) {
 	if atomic.LoadInt32(&self.mining) != 1 {
 		return
@@ -361,11 +372,12 @@ func (self *worker) push(work *Work) {
 
 // makeCurrent creates a new environment for the current cycle.
 func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error {
+	// 父区块的世界状态
 	state, err := self.chain.StateAt(parent.Root())
 	if err != nil {
 		return err
 	}
-	work := &Work{
+	work := &Work{ // 构建work
 		config:    self.config,
 		signer:    types.NewEIP155Signer(self.config.ChainId),
 		state:     state,
@@ -403,10 +415,12 @@ func (self *worker) commitNewWork() {
 	parent := self.chain.CurrentBlock()
 
 	tstamp := tstart.Unix()
+	// 父块时间大于当前时间
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
 		tstamp = parent.Time().Int64() + 1
 	}
 	// this will ensure we're not going off too far in the future
+	// 现在的时间落后于父区块的时间，所以需要休眠一段时间
 	if now := time.Now().Unix(); tstamp > now+1 {
 		wait := time.Duration(tstamp-now) * time.Second
 		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
@@ -414,7 +428,7 @@ func (self *worker) commitNewWork() {
 	}
 
 	num := parent.Number()
-	header := &types.Header{
+	header := &types.Header{ // 构建区块头信息
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent),
@@ -424,9 +438,9 @@ func (self *worker) commitNewWork() {
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 {
-		header.Coinbase = self.coinbase
+		header.Coinbase = self.coinbase // 设置coinbase
 	}
-	if err := self.engine.Prepare(self.chain, header); err != nil {
+	if err := self.engine.Prepare(self.chain, header); err != nil { // 更新当前区块的难度
 		log.Error("Failed to prepare header for mining", "err", err)
 		return
 	}
@@ -444,6 +458,7 @@ func (self *worker) commitNewWork() {
 		}
 	}
 	// Could potentially happen if starting to mine in an odd state.
+	// 构建work
 	err := self.makeCurrent(parent, header)
 	if err != nil {
 		log.Error("Failed to create mining context", "err", err)
@@ -454,12 +469,15 @@ func (self *worker) commitNewWork() {
 	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(work.state)
 	}
+	// 从交易池中获取pending交易
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
 	}
+	// 筛选交易
 	txs := types.NewTransactionsByPriceAndNonce(self.current.signer, pending)
+	//在当前世界状态的基础上 执行txs
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
@@ -467,7 +485,7 @@ func (self *worker) commitNewWork() {
 		uncles    []*types.Header
 		badUncles []common.Hash
 	)
-	for hash, uncle := range self.possibleUncles {
+	for hash, uncle := range self.possibleUncles { // 最多引用两个叔叔区块
 		if len(uncles) == 2 {
 			break
 		}
@@ -485,7 +503,7 @@ func (self *worker) commitNewWork() {
 		delete(self.possibleUncles, hash)
 	}
 	// Create the new block to seal with the consensus engine
-	// 开始打包区块 从共识引擎中获取区块信息，将获取的区块赋值给work, work会启动打包任务
+	// 将交易中执行后的世界状态，receipt,txs,uncle 区块， 放入区块中
 	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
@@ -522,6 +540,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 
 	for {
 		// Retrieve the next transaction and abort if all done
+		// 从txs中取出交易
 		tx := txs.Peek()
 		if tx == nil {
 			break
@@ -530,6 +549,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		// during transaction acceptance is the transaction pool.
 		//
 		// We use the eip155 signer regardless of the current hf.
+		// 从交易中根据v,r,s 解析出交易发送者账号（公钥）
 		from, _ := types.Sender(env.signer, tx)
 		// Check whether the tx is replay protected. If we're not in the EIP155 hf
 		// phase, start ignoring the sender until we do.
@@ -540,8 +560,10 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 			continue
 		}
 		// Start executing the transaction
+		// 在世界状态中预执行交易
 		env.state.Prepare(tx.Hash(), common.Hash{}, env.tcount)
 
+		// 执行交易
 		err, logs := env.commitTransaction(tx, bc, coinbase, gp)
 		switch err {
 		case core.ErrGasLimitReached:
@@ -584,25 +606,26 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		go func(logs []*types.Log, tcount int) {
 			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})
+				mux.Post(core.PendingLogsEvent{Logs: logs})  // 广播交易执行成功后的log
 			}
 			if tcount > 0 {
-				mux.Post(core.PendingStateEvent{})
+				mux.Post(core.PendingStateEvent{}) // 广播最新的状态
 			}
 		}(cpy, env.tcount)
 	}
 }
 
 func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, coinbase common.Address, gp *core.GasPool) (error, []*types.Log) {
-	snap := env.state.Snapshot()
+	snap := env.state.Snapshot() // 当前世界状态的快照
 
+	// 执行交易 返回receipt
 	receipt, _, err := core.ApplyTransaction(env.config, bc, &coinbase, gp, env.state, env.header, tx, env.header.GasUsed, vm.Config{})
 	if err != nil {
-		env.state.RevertToSnapshot(snap)
+		env.state.RevertToSnapshot(snap) // 发生错误时，回滚状态
 		return err, nil
 	}
-	env.txs = append(env.txs, tx)
-	env.receipts = append(env.receipts, receipt)
+	env.txs = append(env.txs, tx) // 合法的交易
+	env.receipts = append(env.receipts, receipt) // 交易执行成功返回的receipt
 
 	return nil, receipt.Logs
 }
