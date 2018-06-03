@@ -108,7 +108,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		// 因为blocks中的区块都是按顺序排列的。排在最开始的肯定是最老的区块。
 		// 所以每次只需要检查最开始的那个区块，如果处理完了，就从循环队列里面摘除。
 		next := set.blocks.Value.(*unconfirmedBlock)
-		if next.index+uint64(set.depth) > height {
+		if next.index+uint64(set.depth) > height { // 未超过set.depth个区块的确认
 			break
 		}
 		// Block seems to exceed depth allowance, check for canonical status
@@ -117,7 +117,7 @@ func (set *unconfirmedBlocks) Shift(height uint64) {
 		switch {
 		case header == nil:
 			log.Warn("Failed to retrieve header of mined block", "number", next.index, "hash", next.hash)
-		case header.Hash() == next.hash: // 如果区块头就等于我们自己
+		case header.Hash() == next.hash: // 如果区块头就等于我们自己 ，说明已经在主链上了
 			log.Info("🔗 block reached canonical chain", "number", next.index, "hash", next.hash)
 		default:// 否则说明我们在侧链上面。
 			log.Info("⑂ block  became a side fork", "number", next.index, "hash", next.hash)
