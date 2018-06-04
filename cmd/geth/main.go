@@ -240,6 +240,7 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 		}
 	}
 	// Register wallet event handlers to open and auto-derive wallets
+	// 钱包事件
 	events := make(chan accounts.WalletEvent, 16)
 	stack.AccountManager().Subscribe(events)
 

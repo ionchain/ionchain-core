@@ -199,7 +199,7 @@ func (n *Node) Start() error {
 	for _, service := range services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
-	// 绮p2p服务
+	// 启动p2p服务
 	if err := running.Start(); err != nil {
 		return convertFileLockError(err)
 	}
