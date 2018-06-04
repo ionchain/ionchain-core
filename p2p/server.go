@@ -385,6 +385,7 @@ func (srv *Server) Start() (err error) {
 	// node table
 	// p2p 网络，DHT
 	if !srv.NoDiscovery {
+		// 返回udp table 监听ListenAddr端口，监听网络中的packet包
 		ntab, err := discover.ListenUDP(srv.PrivateKey, srv.ListenAddr, srv.NAT, srv.NodeDatabase, srv.NetRestrict)
 		if err != nil {
 			return err
@@ -417,12 +418,12 @@ func (srv *Server) Start() (err error) {
 	// handshake 协议包
 	srv.ourHandshake = &protoHandshake{Version: baseProtocolVersion, Name: srv.Name, ID: discover.PubkeyID(&srv.PrivateKey.PublicKey)}
 	for _, p := range srv.Protocols {
-		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap())
+		srv.ourHandshake.Caps = append(srv.ourHandshake.Caps, p.cap()) //所有注册协议的cap
 	}
 	// listen/dial
 	// 开始监听
 	if srv.ListenAddr != "" {
-		if err := srv.startListening(); err != nil {
+		if err := srv.startListening(); err != nil { // 监听tcp连接
 			return err
 		}
 	}
