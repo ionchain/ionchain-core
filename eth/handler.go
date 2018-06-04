@@ -103,10 +103,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
-		eventMux:    mux,
-		txpool:      txpool,
-		blockchain:  blockchain,
-		chaindb:     chaindb,
+		eventMux:    mux, // 事件管理器
+		txpool:      txpool, //交易池
+		blockchain:  blockchain, // 主链
+		chaindb:     chaindb, // 区块存储
 		chainconfig: config,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
