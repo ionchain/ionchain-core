@@ -962,7 +962,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks) (int, []interface{}, []*ty
 				// if given.
 				// 如果是未来的区块, 而且区块的时间距离现在不是很久远. 那么存放起来.
 				max := big.NewInt(time.Now().Unix() + maxTimeFutureBlocks)
-				if block.Time().Cmp(max) > 0 {
+				if block.Time().Cmp(max) > 0 { // 超过未来最大时间的区块 --- 30s
 					return i, events, coalescedLogs, fmt.Errorf("future block: %v > %v", block.Time(), max)
 				}
 				bc.futureBlocks.Add(block.Hash(), block)

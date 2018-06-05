@@ -300,7 +300,7 @@ func (pool *TxPool) loop() {
 		// Handle stats reporting ticks
 		case <-report.C:
 			pool.mu.RLock()
-			pending, queued := pool.stats()
+			pending, queued := pool.stats() // 交易池的状态
 			stales := pool.priced.stales
 			pool.mu.RUnlock()
 
@@ -356,10 +356,11 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 
 	if oldHead != nil && oldHead.Hash() != newHead.ParentHash {
 		// If the reorg is too deep, avoid doing it (will happen during fast sync)
+		// 如果reorg深度太深，不要做充足操作（这一般会发生在fast sync）
 		oldNum := oldHead.Number.Uint64()
 		newNum := newHead.Number.Uint64()
 
-		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 64 {
+		if depth := uint64(math.Abs(float64(oldNum) - float64(newNum))); depth > 64 { //reorg 深度大于64
 			log.Warn("Skipping deep transaction reorg", "depth", depth)
 		} else {
 			// Reorg seems shallow enough to pull in all transactions into memory
@@ -492,6 +493,7 @@ func (pool *TxPool) Stats() (int, int) {
 
 // stats retrieves the current pool stats, namely the number of pending and the
 // number of queued (non-executable) transactions.
+// stats 取出当前pool的状态，即：pending交易数量，queued交易数量（不可执行的交易）
 func (pool *TxPool) stats() (int, int) {
 	pending := 0
 	for _, list := range pool.pending {
