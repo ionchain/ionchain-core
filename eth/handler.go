@@ -123,9 +123,12 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 		manager.fastSync = uint32(1)
 	}
 	// Initiate a sub-protocol for every implemented version we can handle
+	// eth63,eth62 协议
 	manager.SubProtocols = make([]p2p.Protocol, 0, len(ProtocolVersions))
+	// 遍历协议
 	for i, version := range ProtocolVersions {
 		// Skip protocol version if incompatible with the mode of operation
+		// 跳过不兼容的协议
 		if mode == downloader.FastSync && version < eth63 {
 			continue
 		}

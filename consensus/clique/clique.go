@@ -268,13 +268,14 @@ func (c *Clique) VerifyHeaders(chain consensus.ChainReader, headers []*types.Hea
 // a batch of new headers.
 func (c *Clique) verifyHeader(chain consensus.ChainReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
-		return errUnknownBlock
+		return errUnknownBlock // 未知区块错误
 	}
 	number := header.Number.Uint64()
 
 	// Don't waste time checking blocks from the future
+	// 不必浪费时间校验来自未来的区块
 	if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
-		return consensus.ErrFutureBlock
+		return consensus.ErrFutureBlock // 未来区块---区块的时间大于当前系统时间
 	}
 	// Checkpoint blocks need to enforce zero beneficiary
 	checkpoint := (number % c.config.Epoch) == 0

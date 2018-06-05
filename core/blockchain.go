@@ -1236,7 +1236,7 @@ func (bc *BlockChain) update() {
 	futureTimer := time.Tick(5 * time.Second)
 	for {
 		select {
-		case <-futureTimer:
+		case <-futureTimer: // 每隔5s运行
 			bc.procFutureBlocks()
 		case <-bc.quit:
 			return
