@@ -43,9 +43,10 @@ type txsync struct {
 }
 
 // syncTransactions starts sending all currently pending transactions to the given peer.
+// 向远程节点发送所有pending交易
 func (pm *ProtocolManager) syncTransactions(p *peer) {
 	var txs types.Transactions
-	pending, _ := pm.txpool.Pending()
+	pending, _ := pm.txpool.Pending() //交易池中pending状态的交易
 	for _, batch := range pending {
 		txs = append(txs, batch...)
 	}
@@ -62,6 +63,8 @@ func (pm *ProtocolManager) syncTransactions(p *peer) {
 // connection. When a new peer appears, we relay all currently pending
 // transactions. In order to minimise egress bandwidth usage, we send
 // the transactions in small packs to one peer at a time.
+// 当新节点加入时，txsyncloop会处理初始交易同步。当一个新的节点出现是我们会向它传播当前的pending交易
+// 为了最小化上行宽带的使用，我们向节点发送交易时，将交易打包到一个小pack中
 func (pm *ProtocolManager) txsyncLoop() {
 	var (
 		pending = make(map[discover.NodeID]*txsync)
@@ -107,7 +110,7 @@ func (pm *ProtocolManager) txsyncLoop() {
 
 	for {
 		select {
-		case s := <-pm.txsyncCh:
+		case s := <-pm.txsyncCh: // 交易池中pending状态的交易
 			pending[s.p.ID()] = s
 			if !sending {
 				send(s)
@@ -144,8 +147,9 @@ func (pm *ProtocolManager) syncer() {
 
 	for {
 		select {
-		case <-pm.newPeerCh:
+		case <-pm.newPeerCh: //新加入的节点
 			// Make sure we have peers to select from, then sync
+			// 确保我们有足够多的区块可以选择
 			if pm.peers.Len() < minDesiredPeerCount {
 				break
 			}
@@ -153,6 +157,7 @@ func (pm *ProtocolManager) syncer() {
 
 		case <-forceSync.C:
 			// Force a sync even if not enough peers are present
+			// 每隔10S与远程节点同步一次区块
 			go pm.synchronise(pm.peers.BestPeer())
 
 		case <-pm.noMorePeers:
@@ -162,22 +167,24 @@ func (pm *ProtocolManager) syncer() {
 }
 
 // synchronise tries to sync up our local block chain with a remote peer.
+// 尝试将本地区块链和远程区块链同步起来
 func (pm *ProtocolManager) synchronise(peer *peer) {
 	// Short circuit if no peers are available
 	if peer == nil {
 		return
 	}
 	// Make sure the peer's TD is higher than our own
+	// 确保远程节点的区块链总难度大于我们的
 	currentBlock := pm.blockchain.CurrentBlock()
-	td := pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())
+	td := pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64()) // 本地区块链的总难度
 
-	pHead, pTd := peer.Head()
-	if pTd.Cmp(td) <= 0 {
+	pHead, pTd := peer.Head() //远程区块链总难度
+	if pTd.Cmp(td) <= 0 { // 远程节点的总难度小于本地的总难度
 		return
 	}
 	// Otherwise try to sync with the downloader
 	mode := downloader.FullSync
-	if atomic.LoadUint32(&pm.fastSync) == 1 {
+	if atomic.LoadUint32(&pm.fastSync) == 1 { // 快速同步
 		// Fast sync was explicitly requested, and explicitly granted
 		mode = downloader.FastSync
 	} else if currentBlock.NumberU64() == 0 && pm.blockchain.CurrentFastBlock().NumberU64() > 0 {
@@ -190,6 +197,7 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		mode = downloader.FastSync
 	}
 	// Run the sync cycle, and disable fast sync if we've went past the pivot block
+	// 与远程节点同步区块
 	err := pm.downloader.Synchronise(peer.id, pHead, pTd, mode)
 
 	if atomic.LoadUint32(&pm.fastSync) == 1 {
@@ -210,6 +218,8 @@ func (pm *ProtocolManager) synchronise(peer *peer) {
 		// scenario will most often crop up in private and hackathon networks with
 		// degenerate connectivity, but it should be healthy for the mainnet too to
 		// more reliably update peers or the local TD state.
+
+		// 我们已经完成了区块同步，通知所有其他远程节点我们的新状态。
 		go pm.BroadcastBlock(head, false)
 	}
 }
