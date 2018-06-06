@@ -48,7 +48,6 @@ var (
 type blockRetrievalFn func(common.Hash) *types.Block
 
 // headerRequesterFn is a callback type for sending a header retrieval request.
-//
 type headerRequesterFn func(common.Hash) error
 
 // bodyRequesterFn is a callback type for sending a body retrieval request.
@@ -319,6 +318,8 @@ func (f *Fetcher) loop() {
 			// Otherwise if fresh and still unknown, try and import
 			hash := op.block.Hash()
 			if number+maxUncleDist < height || f.getBlock(hash) != nil {
+				// 区块的高度太低 低于当前的height-maxUncleDist
+				// 或者区块已经被import了
 				f.forgetBlock(hash)
 				continue
 			}
@@ -332,6 +333,7 @@ func (f *Fetcher) loop() {
 
 		case notification := <-f.notify:
 			// A block was announced, make sure the peer isn't DOSing us
+			//在接收到NewBlockHashesMsg的时候，对于本地区块链还没有的区块的hash值会调用fetcher的Notify方法发送到notify通道。
 			propAnnounceInMeter.Mark(1)
 
 			count := f.announces[notification.origin] + 1
@@ -366,16 +368,19 @@ func (f *Fetcher) loop() {
 
 		case op := <-f.inject:
 			// A direct block insertion was requested, try and fill any pending gaps
+			// 在接收到NewBlockMsg的时候会调用fetcher的Enqueue方法，这个方法会把当前接收到的区块发送到inject通道。
 			propBroadcastInMeter.Mark(1)
 			f.enqueue(op.origin, op.block)
 
 		case hash := <-f.done:
 			// A pending import finished, remove all traces of the notification
+			//当完成一个区块的import的时候会发送该区块的hash值到done通道。
 			f.forgetHash(hash)
 			f.forgetBlock(hash)
 
 		case <-fetchTimer.C:
 			// At least one block's timer ran out, check for needing retrieval
+			// fetchTimer定时器，定期对需要fetch的区块头进行fetch
 			request := make(map[string][]common.Hash)
 
 			for hash, announces := range f.announced {
@@ -412,6 +417,7 @@ func (f *Fetcher) loop() {
 
 		case <-completeTimer.C:
 			// At least one header's timer ran out, retrieve everything
+			// completeTimer定时器定期对需要fetch的区块体进行fetch
 			request := make(map[string][]common.Hash)
 
 			for hash, announces := range f.fetched {
@@ -443,6 +449,8 @@ func (f *Fetcher) loop() {
 			// Headers arrived from a remote peer. Extract those that were explicitly
 			// requested by the fetcher, and return everything else so it's delivered
 			// to other parts of the system.
+			//当接收到BlockHeadersMsg的消息的时候(接收到一些区块头),会把这些消息投递到headerFilter队列。
+			// 这边会把属于fetcher请求的数据留下，其他的会返回出来，给其他系统使用。
 			var task *headerFilterTask
 			select {
 			case task = <-filter:
@@ -519,6 +527,8 @@ func (f *Fetcher) loop() {
 
 		case filter := <-f.bodyFilter:
 			// Block bodies arrived, extract any explicitly requested blocks, return the rest
+			//当接收到BlockBodiesMsg消息的时候，会把这些消息投递给bodyFilter队列。这边会把属于fetcher请求的数据留下，
+			// 其他的会返回出来，给其他系统使用。
 			var task *bodyFilterTask
 			select {
 			case task = <-filter:
