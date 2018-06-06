@@ -44,9 +44,11 @@ var (
 )
 
 // blockRetrievalFn is a callback type for retrieving a block from the local chain.
+// 从本地链中取出区块是 回调这个函数
 type blockRetrievalFn func(common.Hash) *types.Block
 
 // headerRequesterFn is a callback type for sending a header retrieval request.
+//
 type headerRequesterFn func(common.Hash) error
 
 // bodyRequesterFn is a callback type for sending a body retrieval request.
@@ -69,13 +71,14 @@ type peerDropFn func(id string)
 
 // announce is the hash notification of the availability of a new block in the
 // network.
+// 当网络中有可用的新区快出现时，announce会发出通知
 type announce struct {
-	hash   common.Hash   // Hash of the block being announced
-	number uint64        // Number of the block being announced (0 = unknown | old protocol)
+	hash   common.Hash   // Hash of the block being announced  申明的区块hash
+	number uint64        // Number of the block being announced (0 = unknown | old protocol) 申明的区块编号
 	header *types.Header // Header of the block partially reassembled (new protocol)
-	time   time.Time     // Timestamp of the announcement
+	time   time.Time     // Timestamp of the announcement 申明时间
 
-	origin string // Identifier of the peer originating the notification
+	origin string // Identifier of the peer originating the notification  发出通知区块的节点标志
 
 	fetchHeader headerRequesterFn // Fetcher function to retrieve the header of an announced block
 	fetchBodies bodyRequesterFn   // Fetcher function to retrieve the body of an announced block
@@ -133,7 +136,7 @@ type Fetcher struct {
 	getBlock       blockRetrievalFn   // Retrieves a block from the local chain
 	verifyHeader   headerVerifierFn   // Checks if a block's headers have a valid proof of work
 	broadcastBlock blockBroadcasterFn // Broadcasts a block to connected peers
-	chainHeight    chainHeightFn      // Retrieves the current chain's height
+	chainHeight    chainHeightFn      // Retrieves the current chain's height 获取当前链的区块高度
 	insertChain    chainInsertFn      // Injects a batch of blocks into the chain
 	dropPeer       peerDropFn         // Drops a peer for misbehaving
 
@@ -276,6 +279,7 @@ func (f *Fetcher) FilterBodies(peer string, transactions [][]*types.Transaction,
 
 // Loop is the main fetcher loop, checking and processing various notification
 // events.
+// 检查、处理各种通知事件
 func (f *Fetcher) loop() {
 	// Iterate the block fetching until a quit is requested
 	fetchTimer := time.NewTimer(0)
@@ -286,8 +290,9 @@ func (f *Fetcher) loop() {
 
 		// Clean up any expired block fetches
 		// 对应白皮书中的第一步
+		// 清除失效的区块 fetches
 		for hash, announce := range f.fetching {
-			if time.Since(announce.time) > fetchTimeout {
+			if time.Since(announce.time) > fetchTimeout { // 已经超时的通知
 				f.forgetHash(hash)
 			}
 		}
@@ -295,9 +300,10 @@ func (f *Fetcher) loop() {
 
 		// Import any queued blocks that could potentially fit
 		//对应白皮书的第二步
-		height := f.chainHeight()
-		for !f.queue.Empty() {
-			op := f.queue.PopItem().(*inject)
+		// 导入在队列中的区块
+		height := f.chainHeight() //区块高度
+		for !f.queue.Empty() { // 当前队列非空
+			op := f.queue.PopItem().(*inject) // 队列中第一个元素
 			if f.queueChangeHook != nil {
 				f.queueChangeHook(op.block.Hash(), false)
 			}

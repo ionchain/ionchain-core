@@ -716,12 +716,13 @@ func (pm *ProtocolManager) BroadcastBlock(block *types.Block, propagate bool) {
 
 // BroadcastTx will propagate a transaction to all peers which are not known to
 // already have the given transaction.
+// 讲一个交易传递给所有的节点，已知这些节点没有这些交易
 func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) {
 	// Broadcast transaction to a batch of peers not knowing about it
-	peers := pm.peers.PeersWithoutTx(hash)
+	peers := pm.peers.PeersWithoutTx(hash) // 这些节点目前还不知道txhash的存在
 	//FIXME include this again: peers = peers[:int(math.Sqrt(float64(len(peers))))]
 	for _, peer := range peers {
-		peer.SendTransactions(types.Transactions{tx})
+		peer.SendTransactions(types.Transactions{tx}) //给节点发送交易
 	}
 	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
