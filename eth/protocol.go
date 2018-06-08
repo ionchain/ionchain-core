@@ -124,6 +124,7 @@ type newBlockHashesData []struct {
 }
 
 // getBlockHeadersData represents a block header query.
+// 区块头查询
 type getBlockHeadersData struct {
 	Origin  hashOrNumber // Block from which to retrieve headers
 	Amount  uint64       // Maximum number of headers to retrieve

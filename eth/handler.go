@@ -261,7 +261,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	p.Log().Debug("Ethereum peer connected", "name", p.Name())
 
 	// Execute the Ethereum handshake
-	td, head, genesis := pm.blockchain.Status()
+	td, head, genesis := pm.blockchain.Status() // 总难度，区块头，创世块
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
 		p.Log().Debug("Ethereum handshake failed", "err", err)
 		return err
@@ -270,6 +270,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		rw.Init(p.version)
 	}
 	// Register the peer locally
+	// 在本地注册peer
 	if err := pm.peers.Register(p); err != nil {
 		p.Log().Error("Ethereum peer registration failed", "err", err)
 		return err
@@ -277,6 +278,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	defer pm.removePeer(p.id)
 
 	// Register the peer in the downloader. If the downloader considers it banned, we disconnect
+	// 在Downloader中注册peer
 	if err := pm.downloader.RegisterPeer(p.id, p.version, p); err != nil {
 		return err
 	}
@@ -304,6 +306,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 		}()
 	}
 	// main loop. handle incoming messages.
+	// 主循环，处理incoming 消息
 	for {
 		if err := pm.handleMsg(p); err != nil {
 			p.Log().Debug("Ethereum message handling failed", "err", err)
@@ -320,7 +323,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	if err != nil {
 		return err
 	}
-	if msg.Size > ProtocolMaxMsgSize {
+	if msg.Size > ProtocolMaxMsgSize { // 不能大于10M
 		return errResp(ErrMsgTooLarge, "%v > %v", msg.Size, ProtocolMaxMsgSize)
 	}
 	defer msg.Discard()
@@ -329,9 +332,11 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 	switch {
 	case msg.Code == StatusMsg:
 		// Status messages should never arrive after the handshake
+		// Status messages在handshake后不应该再到达这里
 		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
 
 	// Block header query, collect the requested headers and reply
+	// 区块头查询
 	case msg.Code == GetBlockHeadersMsg:
 		// Decode the complex header query
 		var query getBlockHeadersData
