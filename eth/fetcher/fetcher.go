@@ -188,6 +188,7 @@ func (f *Fetcher) Stop() {
 
 // Notify announces the fetcher of the potential availability of a new block in
 // the network.
+//在接收到NewBlockHashesMsg的时候，对于本地区块链还没有的区块的hash值会调用fetcher的Notify方法发送到notify通道。
 func (f *Fetcher) Notify(peer string, hash common.Hash, number uint64, time time.Time,
 	headerFetcher headerRequesterFn, bodyFetcher bodyRequesterFn) error {
 	block := &announce{
