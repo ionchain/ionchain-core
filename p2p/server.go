@@ -484,6 +484,7 @@ func (srv *Server) run(dialstate dialer) {
 	}
 
 	// removes t from runningTasks
+	// 将任务t从runningTasks中删除
 	delTask := func(t task) {
 		for i := range runningTasks {
 			if runningTasks[i] == t {
@@ -493,15 +494,16 @@ func (srv *Server) run(dialstate dialer) {
 		}
 	}
 	// starts until max number of active tasks is satisfied
+	// 启动ts中的任务，当达到最大可运行任务数量时 停止
 	startTasks := func(ts []task) (rest []task) {
 		i := 0
 		for ; len(runningTasks) < maxActiveDialTasks && i < len(ts); i++ {
 			t := ts[i]
 			log.Trace("New dial task", "task", t)
 			go func() { t.Do(srv); taskdone <- t }()
-			runningTasks = append(runningTasks, t)
+			runningTasks = append(runningTasks, t) // 加入到runningTasks
 		}
-		return ts[i:]
+		return ts[i:] //超出最大运行任务后的任务
 	}
 	scheduleTasks := func() {
 		// Start from queue first.
@@ -509,7 +511,7 @@ func (srv *Server) run(dialstate dialer) {
 		// Query dialer for new tasks and start as many as possible now.
 		if len(runningTasks) < maxActiveDialTasks {
 			nt := dialstate.newTasks(len(runningTasks)+len(queuedTasks), peers, time.Now())
-			queuedTasks = append(queuedTasks, startTasks(nt)...)
+			queuedTasks = append(queuedTasks, startTasks(nt)...) // 加入queuedTasks
 		}
 	}
 
@@ -714,6 +716,7 @@ func (srv *Server) SetupConn(fd net.Conn, flags connFlag, dialDest *discover.Nod
 	srv.lock.Lock()
 	running := srv.running
 	srv.lock.Unlock()
+	// 创建连接
 	c := &conn{fd: fd, transport: srv.newTransport(fd), flags: flags, cont: make(chan error)}
 	if !running {
 		c.close(errServerStopped)
