@@ -799,6 +799,7 @@ func (srv *Server) runPeer(p *Peer) {
 	}
 
 	// broadcast peer add
+	// 广播 新节点加入事件
 	srv.peerFeed.Send(&PeerEvent{
 		Type: PeerEventTypeAdd,
 		Peer: p.ID(),

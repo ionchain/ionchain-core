@@ -195,7 +195,7 @@ func (n *Node) Start() error {
 		services[kind] = service
 	}
 	// Gather the protocols and start the freshly assembled P2P server
-	// 将服务加入到p2p协议中
+	// 将协议加入到p2p协议中
 	for _, service := range services {
 		running.Protocols = append(running.Protocols, service.Protocols()...)
 	}
