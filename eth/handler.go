@@ -368,7 +368,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 
 			// Advance to the next header of the query
 			switch {
-			case query.Origin.Hash != (common.Hash{}) && query.Reverse: // 向前查找，一直到创世区块
+			case query.Origin.Hash != (common.Hash{}) && query.Reverse: // 向前查找，区块hash查找一直到创世区块
 				// Hash based traversal towards the genesis block
 				for i := 0; i < int(query.Skip)+1; i++ {
 					if header := pm.blockchain.GetHeader(query.Origin.Hash, number); header != nil {
@@ -379,7 +379,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 						break
 					}
 				}
-			case query.Origin.Hash != (common.Hash{}) && !query.Reverse:
+			case query.Origin.Hash != (common.Hash{}) && !query.Reverse: // 向后查找，区块hash查找一直到叶子区块
 				// Hash based traversal towards the leaf block
 				var (
 					current = origin.Number.Uint64()
@@ -400,7 +400,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 						unknown = true
 					}
 				}
-			case query.Reverse:
+			case query.Reverse: // 区块号查找一直到创始区块
 				// Number based traversal towards the genesis block
 				if query.Origin.Number >= query.Skip+1 {
 					query.Origin.Number -= (query.Skip + 1)
@@ -408,12 +408,12 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 					unknown = true
 				}
 
-			case !query.Reverse:
+			case !query.Reverse: // 区块号查找一直到叶子区块
 				// Number based traversal towards the leaf block
 				query.Origin.Number += (query.Skip + 1)
 			}
 		}
-		return p.SendBlockHeaders(headers)
+		return p.SendBlockHeaders(headers) // 发送查找到的区块头
 
 	case msg.Code == BlockHeadersMsg:
 		// A batch of headers arrived to one of our previous requests
@@ -422,6 +422,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			return errResp(ErrDecode, "msg %v: %v", msg, err)
 		}
 		// If no headers were received, but we're expending a DAO fork check, maybe it's that
+		// 如果没有收到区块头
 		if len(headers) == 0 && p.forkDrop != nil {
 			// Possibly an empty reply to the fork header checks, sanity check TDs
 			verifyDAO := true
@@ -459,16 +460,17 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				return nil
 			}
 			// Irrelevant of the fork checks, send the header to the fetcher just in case
+			// 与分叉检查无关，将头发送给fetcher以防万一
 			headers = pm.fetcher.FilterHeaders(p.id, headers, time.Now())
 		}
 		if len(headers) > 0 || !filter {
-			err := pm.downloader.DeliverHeaders(p.id, headers)
+			err := pm.downloader.DeliverHeaders(p.id, headers) // downloader devliverHeaders
 			if err != nil {
 				log.Debug("Failed to deliver headers", "err", err)
 			}
 		}
 
-	case msg.Code == GetBlockBodiesMsg:
+	case msg.Code == GetBlockBodiesMsg: // 获取区块体
 		// Decode the retrieval message
 		msgStream := rlp.NewStream(msg.Payload, uint64(msg.Size))
 		if _, err := msgStream.List(); err != nil {
@@ -606,7 +608,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			log.Debug("Failed to deliver receipts", "err", err)
 		}
 
-	case msg.Code == NewBlockHashesMsg:
+	case msg.Code == NewBlockHashesMsg: // 新的区块头消息
 		var announces newBlockHashesData
 		if err := msg.Decode(&announces); err != nil {
 			return errResp(ErrDecode, "%v: %v", msg, err)
@@ -622,7 +624,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				unknown = append(unknown, block)
 			}
 		}
-		for _, block := range unknown {
+		for _, block := range unknown { // 本地节点没有的区块头
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
@@ -638,16 +640,17 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		request.Block.ReceivedFrom = p
 
 		// Mark the peer as owning the block and schedule it for import
-		p.MarkBlock(request.Block.Hash())
-		pm.fetcher.Enqueue(p.id, request.Block)
+		p.MarkBlock(request.Block.Hash()) // 标记远程节点p已经拥有这个区块
+		pm.fetcher.Enqueue(p.id, request.Block) // 导入操作
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
 		// calculate the head hash and TD that the peer truly must have.
 		var (
 			trueHead = request.Block.ParentHash()
-			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty())
+			trueTD   = new(big.Int).Sub(request.TD, request.Block.Difficulty()) // 新区块的总难度
 		)
 		// Update the peers total difficulty if better than the previous
+		// 更新远程节点的总难度值，看看是否比之前的难度要高一点
 		if _, td := p.Head(); trueTD.Cmp(td) > 0 {
 			p.SetHead(trueHead, trueTD)
 
@@ -655,8 +658,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			// a singe block (as the true TD is below the propagated block), however this
 			// scenario should easily be covered by the fetcher.
 			currentBlock := pm.blockchain.CurrentBlock()
-			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 {
-				go pm.synchronise(p)
+			if trueTD.Cmp(pm.blockchain.GetTd(currentBlock.Hash(), currentBlock.NumberU64())) > 0 { // 如果节点的总难度比当前节点大
+				go pm.synchronise(p) // 开始同步
 			}
 		}
 
@@ -676,9 +679,9 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			if tx == nil {
 				return errResp(ErrDecode, "transaction %d is nil", i)
 			}
-			p.MarkTransaction(tx.Hash())
+			p.MarkTransaction(tx.Hash()) // 标记节点P已经拥有了这个交易
 		}
-		pm.txpool.AddRemotes(txs)
+		pm.txpool.AddRemotes(txs) //将其他节点批量交易发送到交易池中
 
 	default:
 		return errResp(ErrInvalidMsgCode, "%v", msg.Code)
