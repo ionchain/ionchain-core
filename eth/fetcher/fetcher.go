@@ -289,7 +289,6 @@ func (f *Fetcher) loop() {
 
 
 		// Clean up any expired block fetches
-		// 对应白皮书中的第一步
 		// 清除失效的区块 fetches
 		for hash, announce := range f.fetching {
 			if time.Since(announce.time) > fetchTimeout { // 已经超时的通知
@@ -299,7 +298,6 @@ func (f *Fetcher) loop() {
 
 
 		// Import any queued blocks that could potentially fit
-		//对应白皮书的第二步
 		// 导入在队列中的区块
 		height := f.chainHeight() //区块高度
 		for !f.queue.Empty() { // 当前队列非空
