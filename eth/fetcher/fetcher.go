@@ -121,8 +121,8 @@ type Fetcher struct {
 	quit chan struct{}
 
 	// Announce states
-	announces  map[string]int              // Per peer announce counts to prevent memory exhaustion
-	announced  map[common.Hash][]*announce // Announced blocks, scheduled for fetching
+	announces  map[string]int              // Per peer announce counts to prevent memory exhaustion 每个节点申明的次数
+	announced  map[common.Hash][]*announce // Announced blocks, scheduled for fetching 收集所有的申明，用于之后的schedule
 	fetching   map[common.Hash]*announce   // Announced blocks, currently fetching
 	fetched    map[common.Hash][]*announce // Blocks with headers fetched, scheduled for body retrieval
 	completing map[common.Hash]*announce   // Blocks with headers, currently body-completing
@@ -351,19 +351,19 @@ func (f *Fetcher) loop() {
 				}
 			}
 			// All is well, schedule the announce if block's not yet downloading
-			if _, ok := f.fetching[notification.hash]; ok {
+			if _, ok := f.fetching[notification.hash]; ok {// 正在fetching
 				break
 			}
-			if _, ok := f.completing[notification.hash]; ok {
+			if _, ok := f.completing[notification.hash]; ok {// 正在completing
 				break
 			}
-			f.announces[notification.origin] = count
-			f.announced[notification.hash] = append(f.announced[notification.hash], notification)
+			f.announces[notification.origin] = count //更新节点申明次数
+			f.announced[notification.hash] = append(f.announced[notification.hash], notification) // 收集申明
 			if f.announceChangeHook != nil && len(f.announced[notification.hash]) == 1 {
 				f.announceChangeHook(notification.hash, true)
 			}
 			if len(f.announced) == 1 {
-				f.rescheduleFetch(fetchTimer)
+				f.rescheduleFetch(fetchTimer) // 重置fetchTimer定时器时间
 			}
 
 		case op := <-f.inject:
@@ -383,16 +383,17 @@ func (f *Fetcher) loop() {
 			// fetchTimer定时器，定期对需要fetch的区块头进行fetch
 			request := make(map[string][]common.Hash)
 
-			for hash, announces := range f.announced {
+			for hash, announces := range f.announced {//已收集到申明信息
 				if time.Since(announces[0].time) > arriveTimeout-gatherSlack {
 					// Pick a random peer to retrieve from, reset all others
+					// 随机选择一个peer
 					announce := announces[rand.Intn(len(announces))]
 					f.forgetHash(hash)
 
 					// If the block still didn't arrive, queue for fetching
-					if f.getBlock(hash) == nil {
+					if f.getBlock(hash) == nil { // 本地链上还没有这个区块
 						request[announce.origin] = append(request[announce.origin], hash)
-						f.fetching[hash] = announce
+						f.fetching[hash] = announce // 将annonce放入fetching中
 					}
 				}
 			}
@@ -408,11 +409,12 @@ func (f *Fetcher) loop() {
 					}
 					for _, hash := range hashes {
 						headerFetchMeter.Mark(1)
-						fetchHeader(hash) // Suboptimal, but protocol doesn't allow batch header retrievals
+						fetchHeader(hash) // Suboptimal, but protocol doesn't allow batch header retrievals 发送GetBlockHeadersMsg
 					}
 				}()
 			}
 			// Schedule the next fetch if blocks are still pending
+			//不停处理pending的fetch,直到announced的len=0
 			f.rescheduleFetch(fetchTimer)
 
 		case <-completeTimer.C:
