@@ -15,6 +15,7 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package fetcher contains the block announcement based synchronisation.
+//fetcher是用来辅助同步区块数据的，记录各个区块头和区块体的同步状态，但它并不做真正下载区块数据的事情，下载的事情交由downloader来做。
 package fetcher
 
 import (
@@ -465,8 +466,10 @@ func (f *Fetcher) loop() {
 				hash := header.Hash()
 
 				// Filter fetcher-requested headers from other synchronisation algorithms
+				// 根据情况看这个是否是我们的请求返回的信息。
 				if announce := f.fetching[hash]; announce != nil && announce.origin == task.peer && f.fetched[hash] == nil && f.completing[hash] == nil && f.queued[hash] == nil {
 					// If the delivered header does not match the promised number, drop the announcer
+					// 如果返回的header的区块高度和我们请求的不同，那么删除掉返回这个header的peer。 并且忘记掉这个hash(以便于重新获取区块信息)
 					if header.Number.Uint64() != announce.number {
 						log.Trace("Invalid block number fetched", "peer", announce.origin, "hash", header.Hash(), "announced", announce.number, "provided", header.Number)
 						f.dropPeer(announce.origin)
@@ -479,6 +482,7 @@ func (f *Fetcher) loop() {
 						announce.time = task.time
 
 						// If the block is empty (header only), short circuit into the final import queue
+						// 根据区块头查看，如果这个区块不包含任何交易或者是Uncle区块。那么我们就不用获取区块的body了。 那么直接插入完成列表。
 						if header.TxHash == types.DeriveSha(types.Transactions{}) && header.UncleHash == types.CalcUncleHash([]*types.Header{}) {
 							log.Trace("Block empty, skipping body retrieval", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
 
@@ -490,6 +494,7 @@ func (f *Fetcher) loop() {
 							continue
 						}
 						// Otherwise add to the list of blocks needing completion
+						// 否则，插入到未完成列表等待fetch blockbody
 						incomplete = append(incomplete, announce)
 					} else {
 						log.Trace("Block already imported, discarding header", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
@@ -497,11 +502,13 @@ func (f *Fetcher) loop() {
 					}
 				} else {
 					// Fetcher doesn't know about it, add to the return list
+					// Fetcher并不知道这个header。 增加到返回列表等待返回
 					unknown = append(unknown, header)
 				}
 			}
 			headerFilterOutMeter.Mark(int64(len(unknown)))
 			select {
+			// 把返回结果返回。
 			case filter <- &headerFilterTask{headers: unknown, time: task.time}:
 			case <-f.quit:
 				return
@@ -509,15 +516,17 @@ func (f *Fetcher) loop() {
 			// Schedule the retrieved headers for body completion
 			for _, announce := range incomplete {
 				hash := announce.header.Hash()
-				if _, ok := f.completing[hash]; ok {
+				if _, ok := f.completing[hash]; ok {//如果已经在其他的地方完成
 					continue
 				}
+				// 放到等待获取body的map等待处理。
 				f.fetched[hash] = append(f.fetched[hash], announce)
-				if len(f.fetched) == 1 {
+				if len(f.fetched) == 1 {//如果fetched map只有刚刚加入的一个元素。 那么重置计时器。
 					f.rescheduleComplete(completeTimer)
 				}
 			}
 			// Schedule the header-only blocks for import
+			// 这些只有header的区块放入queue等待import
 			for _, block := range complete {
 				if announce := f.completing[block.Hash()]; announce != nil {
 					f.enqueue(announce.origin, block)
@@ -623,6 +632,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 	hash := block.Hash()
 
 	// Ensure the peer isn't DOSing us
+	// 确保peer节点没有向我们发起DOS攻击
 	count := f.queues[peer] + 1
 	if count > blockLimit {
 		log.Debug("Discarded propagated block, exceeded allowance", "peer", peer, "number", block.Number(), "hash", hash, "limit", blockLimit)
@@ -631,6 +641,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		return
 	}
 	// Discard any past or too distant blocks
+	// 抛弃那些距离我们太远的区块
 	if dist := int64(block.NumberU64()) - int64(f.chainHeight()); dist < -maxUncleDist || dist > maxQueueDist {
 		log.Debug("Discarded propagated block, too far away", "peer", peer, "number", block.Number(), "hash", hash, "distance", dist)
 		propBroadcastDropMeter.Mark(1)
@@ -638,6 +649,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 		return
 	}
 	// Schedule the block for future importing
+	// 放入queue中等待 之后的导入操作
 	if _, ok := f.queued[hash]; !ok {
 		op := &inject{
 			origin: peer,
@@ -656,6 +668,7 @@ func (f *Fetcher) enqueue(peer string, block *types.Block) {
 // insert spawns a new goroutine to run a block insertion into the chain. If the
 // block's number is at the same height as the current import phase, if updates
 // the phase states accordingly.
+// 将区块插入到本地链中
 func (f *Fetcher) insert(peer string, block *types.Block) {
 	hash := block.Hash()
 
@@ -665,15 +678,18 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 		defer func() { f.done <- hash }()
 
 		// If the parent's unknown, abort insertion
+		// 如果父区块是未知的，取消插入
 		parent := f.getBlock(block.ParentHash())
 		if parent == nil {
 			log.Debug("Unknown parent of propagated block", "peer", peer, "number", block.Number(), "hash", hash, "parent", block.ParentHash())
 			return
 		}
 		// Quickly validate the header and propagate the block if it passes
+		// 快速校验区块头，如果通过校验 传播区块
 		switch err := f.verifyHeader(block.Header()); err {
 		case nil:
 			// All ok, quickly propagate to our peers
+			// 通过校验，快速向其他节点传播
 			propBroadcastOutTimer.UpdateSince(block.ReceivedAt)
 			go f.broadcastBlock(block, true)
 
@@ -682,16 +698,19 @@ func (f *Fetcher) insert(peer string, block *types.Block) {
 
 		default:
 			// Something went very wrong, drop the peer
+			// 出现一些错误，抛弃这个peer
 			log.Debug("Propagated block verification failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
 			f.dropPeer(peer)
 			return
 		}
 		// Run the actual import and log any issues
+		// 将区块插入到本地链中
 		if _, err := f.insertChain(types.Blocks{block}); err != nil {
 			log.Debug("Propagated block import failed", "peer", peer, "number", block.Number(), "hash", hash, "err", err)
 			return
 		}
 		// If import succeeded, broadcast the block
+		// 如果插入成功，广播这个区块
 		propAnnounceOutTimer.UpdateSince(block.ReceivedAt)
 		go f.broadcastBlock(block, false)
 
