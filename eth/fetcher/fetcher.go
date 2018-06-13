@@ -496,7 +496,7 @@ func (f *Fetcher) loop() {
 							continue
 						}
 						// Otherwise add to the list of blocks needing completion
-						// 否则，插入到未完成列表等待fetch blockbody
+						// 否则，插入到未完成列表等待fetch block  body
 						incomplete = append(incomplete, announce)
 					} else {
 						log.Trace("Block already imported, discarding header", "peer", announce.origin, "number", header.Number, "hash", header.Hash())
