@@ -521,6 +521,7 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 	number := header.Number.Uint64()
 
 	// Assemble the voting snapshot to check which votes make sense
+	// 收集投票快照，检查那些投票是有效的
 	snap, err := c.snapshot(chain, number-1, header.ParentHash, nil)
 	if err != nil {
 		return err
@@ -536,8 +537,9 @@ func (c *Clique) Prepare(chain consensus.ChainReader, header *types.Header) erro
 			}
 		}
 		// If there's pending proposals, cast a vote on them
+		// 如果有pending状态的proposal，给他们投上一票
 		if len(addresses) > 0 {
-			header.Coinbase = addresses[rand.Intn(len(addresses))]
+			header.Coinbase = addresses[rand.Intn(len(addresses))] // coinbase中存放 支持的proposal地址信息
 			if c.proposals[header.Coinbase] {
 				copy(header.Nonce[:], nonceAuthVote)
 			} else {
