@@ -55,7 +55,7 @@ type Header struct {
 	Extra       []byte                     `json:"extraData"             gencodec:"required"`
 //新增字段
 	BaseTarget *big.Int                    `json:baseTarget              gencodec:"required"`   // baseTarget
-	Coinbase    common.Address             `json:"miner"                 gencodec:"required"`	// 矿工 公约
+	Coinbase    common.Address             `json:"miner"                 gencodec:"required"`	// 矿工 公钥
 	BlockSignature []byte                `json:blockSignature          gencodec:"required"`   // 区块签名信息
 	GenerationSignature []byte           `json:generationSignature     gencodec:"required"`   // 生成签名信息
 }
