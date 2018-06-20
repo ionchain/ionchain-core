@@ -19,8 +19,8 @@ package consensus_ionc
 
 import (
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core/state"
-	types "github.com/ionchain/ionchain-core/core/types_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/state"
+	types "github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/rpc"
 )

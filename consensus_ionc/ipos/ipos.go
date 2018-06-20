@@ -2,7 +2,7 @@ package ipos
 
 import (
 	"errors"
-	types "github.com/ionchain/ionchain-core/core/types_ionc"
+	types "github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/common"
 	consensus "github.com/ionchain/ionchain-core/consensus_ionc"
 	"github.com/ionchain/ionchain-core/rpc"
@@ -89,7 +89,8 @@ func (c *IPos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan
 		return nil,errUnknownBlock
 	}
 	// 计算baseTarget是否符合要求
-	// 给区块添加签名
+
+	// 给区块添加签名,baseTarget,BlockGenerationSignature,cumulativeDifficulty
 	return block.WithSeal(header), nil
 }
 
