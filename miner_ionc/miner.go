@@ -65,7 +65,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		worker:   newWorker(config, engine, common.Address{}, eth, mux), //新建worker
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine)) // 向worker中注册agent
+	miner.Register(NewForgeAgent(eth.BlockChain(), engine)) // 向worker中注册agent
 	go miner.update()
 
 	return miner
