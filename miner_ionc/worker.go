@@ -17,8 +17,8 @@
 package miner_ionc
 
 import (
-	"bytes"
-	"fmt"
+	//"bytes"
+	//"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -66,8 +66,8 @@ type Work struct {
 
 	state     *state.StateDB // apply state changes here
 	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
-	family    *set.Set       // family set (used for checking uncle invalidity)
-	uncles    *set.Set       // uncle set
+	//family    *set.Set       // family set (used for checking uncle invalidity)
+	//uncles    *set.Set       // uncle set
 	tcount    int            // tx count in cycle
 
 	Block *types.Block // the new block
@@ -115,8 +115,8 @@ type worker struct {
 	currentMu sync.Mutex
 	current   *Work
 
-	uncleMu        sync.Mutex
-	possibleUncles map[common.Hash]*types.Block
+	//uncleMu        sync.Mutex
+	//possibleUncles map[common.Hash]*types.Block
 
 	unconfirmed *unconfirmedBlocks // set of locally mined blocks pending canonicalness confirmations
 
@@ -138,7 +138,7 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 		recv:           make(chan *Result, resultQueueSize),
 		chain:          eth.BlockChain(),
 		proc:           eth.BlockChain().Validator(),
-		possibleUncles: make(map[common.Hash]*types.Block),
+		//possibleUncles: make(map[common.Hash]*types.Block),
 		coinbase:       coinbase,
 		agents:         make(map[Agent]struct{}),
 		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
@@ -259,10 +259,10 @@ func (self *worker) update() {
 			self.commitNewWork()
 
 		// Handle ChainSideEvent
-		case ev := <-self.chainSideCh: // 分叉链
-			self.uncleMu.Lock()
+		//case ev := <-self.chainSideCh: // 分叉链
+			/*self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
-			self.uncleMu.Unlock()
+			self.uncleMu.Unlock()*/
 
 		// Handle TxPreEvent
 		case ev := <-self.txCh:
@@ -378,8 +378,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		signer:    types.NewEIP155Signer(self.config.ChainId),
 		state:     state,
 		ancestors: set.New(),
-		family:    set.New(),
-		uncles:    set.New(),
+		//family:    set.New(),
+		//uncles:    set.New(),
 		header:    header,
 		createdAt: time.Now(),
 	}
@@ -389,7 +389,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		/*for _, uncle := range ancestor.Uncles() {
 			work.family.Add(uncle.Hash())
 		}*/
-		work.family.Add(ancestor.Hash())
+		//work.family.Add(ancestor.Hash())
 		work.ancestors.Add(ancestor.Hash())
 	}
 
@@ -402,8 +402,8 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 func (self *worker) commitNewWork() {
 	self.mu.Lock()
 	defer self.mu.Unlock()
-	self.uncleMu.Lock()
-	defer self.uncleMu.Unlock()
+	//self.uncleMu.Lock()
+	//defer self.uncleMu.Unlock()
 	self.currentMu.Lock()
 	defer self.currentMu.Unlock()
 
@@ -441,7 +441,7 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
+	/*if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range
 		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
 		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
@@ -452,7 +452,7 @@ func (self *worker) commitNewWork() {
 				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
 			}
 		}
-	}
+	}*/
 	// Could potentially happen if starting to mine in an odd state.
 	// 构建work
 	err := self.makeCurrent(parent, header)
@@ -477,7 +477,7 @@ func (self *worker) commitNewWork() {
 	work.commitTransactions(self.mux, txs, self.chain, self.coinbase)
 
 	// compute uncles for the new block.
-	var (
+	/*var (
 		uncles    []*types.Header
 		badUncles []common.Hash
 	)
@@ -497,16 +497,16 @@ func (self *worker) commitNewWork() {
 	}
 	for _, hash := range badUncles {
 		delete(self.possibleUncles, hash)
-	}
+	}*/
 	// Create the new block to seal with the consensus engine
 	// 将交易中执行后的世界状态，receipt,txs,uncle 区块， 放入区块中
-	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, uncles, work.receipts); err != nil {
+	if work.Block, err = self.engine.Finalize(self.chain, header, work.state, work.txs, work.receipts); err != nil {
 		log.Error("Failed to finalize block for sealing", "err", err)
 		return
 	}
 	// We only care about logging if we're actually mining.
 	if atomic.LoadInt32(&self.mining) == 1 {
-		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, "uncles", len(uncles), "elapsed", common.PrettyDuration(time.Since(tstart)))
+		log.Info("Commit new mining work", "number", work.Block.Number(), "txs", work.tcount, /*"uncles", len(uncles),*/ "elapsed", common.PrettyDuration(time.Since(tstart)))
 		self.unconfirmed.Shift(work.Block.NumberU64() - 1)
 	}
 
@@ -514,7 +514,7 @@ func (self *worker) commitNewWork() {
 	self.push(work)
 }
 
-func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
+/*func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	hash := uncle.Hash()
 	if work.uncles.Has(hash) {
 		return fmt.Errorf("uncle not unique")
@@ -527,7 +527,7 @@ func (self *worker) commitUncle(work *Work, uncle *types.Header) error {
 	}
 	work.uncles.Add(uncle.Hash())
 	return nil
-}
+}*/
 
 func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsByPriceAndNonce, bc *core.BlockChain, coinbase common.Address) {
 	gp := new(core.GasPool).AddGas(env.header.GasLimit)

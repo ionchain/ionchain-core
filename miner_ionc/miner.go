@@ -35,6 +35,7 @@ import (
 )
 
 // Backend wraps all methods required for mining.
+// 做一个FakeBackend
 type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
@@ -66,7 +67,7 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		canStart: 1,
 	}
 	miner.Register(NewForgeAgent(eth.BlockChain(), engine)) // 向worker中注册agent
-	go miner.update()
+	//go miner.update() // 暂停监听网络事件
 
 	return miner
 }

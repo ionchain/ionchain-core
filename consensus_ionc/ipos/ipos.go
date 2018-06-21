@@ -2,11 +2,12 @@ package ipos
 
 import (
 	"errors"
-	types "github.com/ionchain/ionchain-core/core_ionc/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/common"
 	consensus "github.com/ionchain/ionchain-core/consensus_ionc"
 	"github.com/ionchain/ionchain-core/rpc"
-	"github.com/ionchain/ionchain-core/core/state"
+	"github.com/ionchain/ionchain-core/core_ionc/state"
+	"github.com/ionchain/ionchain-core/ethdb"
 )
 
 var (
@@ -14,6 +15,15 @@ var (
 )
 
 type IPos struct {
+	db     ethdb.Database
+}
+
+
+func New( db ethdb.Database) *IPos {
+
+	return &IPos{
+		db:         db,
+	}
 }
 
 // Author retrieves the Ethereum address of the account that minted the given
@@ -70,7 +80,7 @@ func (c *IPos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given, and returns the final block.
 // 返回最终的区块
-func (c *IPos) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
+func (c *IPos) Finalize(chain consensus.ChainReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,  receipts []*types.Receipt) (*types.Block, error) {
 	//AccumulateRewards(chain.Config(), state, header, uncles) // 计算区块奖励 ，奖励放入state中
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number)) // 计算世界状态的根，EIP158 是否删除空的对象
