@@ -17,9 +17,12 @@ import (
 	"github.com/ionchain/ionchain-core/rlp"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/p2p"
+	"github.com/ionchain/ionchain-core/rpc"
 
 	"fmt"
 	"math/big"
+	"github.com/ionchain/ionchain-core/internal/ethapi"
 )
 
 type IONCMini struct {
@@ -113,6 +116,24 @@ func (s *IONCMini) TxPool() *core.TxPool               { return s.txPool }
 func (s *IONCMini) ChainDb() ethdb.Database            { return s.chainDb }
 func (s *IONCMini) EventMux() *event.TypeMux           { return s.eventMux }
 
+func (s *IONCMini) Protocols() []p2p.Protocol {
+	return nil
+}
+
+// Start implements node.Service, starting all internal goroutines needed by the
+// Ethereum protocol implementation.
+func (s *IONCMini) Start(srvr *p2p.Server) error {
+
+}
+
+// Stop implements node.Service, terminating all internal goroutines used by the
+// Ethereum protocol.
+func (s *IONCMini) Stop() error {
+
+
+	return nil
+}
+
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Database, error) {
 	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
@@ -148,4 +169,8 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 
 	return ipos.New(db)
 
+}
+
+func (s *IONCMini) APIs() []rpc.API {
+	return nil
 }
