@@ -26,8 +26,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/types"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/internal/debug"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/node"

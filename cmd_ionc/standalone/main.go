@@ -27,10 +27,10 @@ import (
 
 	"github.com/ionchain/ionchain-core/accounts"
 	"github.com/ionchain/ionchain-core/accounts/keystore"
-	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/console"
-	"github.com/ionchain/ionchain-core/eth"
+	"github.com/ionchain/ionchain-core/mini_ionc"
 	"github.com/ionchain/ionchain-core/ethclient"
 	"github.com/ionchain/ionchain-core/internal/debug"
 	"github.com/ionchain/ionchain-core/log"
@@ -152,24 +152,9 @@ func init() {
 		initCommand,
 		importCommand,
 		exportCommand,
-		copydbCommand,
 		removedbCommand,
 		dumpCommand,
-		// See monitorcmd.go:
-		monitorCommand,
-		// See accountcmd.go:
-		accountCommand,
-		walletCommand,
-		// See consolecmd.go:
-		consoleCommand,
-		attachCommand,
-		javascriptCommand,
-		// See misccmd.go:
-		makecacheCommand,
-		makedagCommand,
-		versionCommand,
-		bugCommand,
-		licenseCommand,
+
 		// See config.go
 		dumpConfigCommand,
 	}
@@ -285,8 +270,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running
-		var ethereum *eth.Ethereum
-		if err := stack.Service(&ethereum); err != nil {
+		var ioncmini *mini_ionc.IONCMini
+		if err := stack.Service(&ioncmini); err != nil {
 			utils.Fatalf("ethereum service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
@@ -294,14 +279,14 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := ethereum.Engine().(threaded); ok {
+			if th, ok := ioncmini.Engine().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}
 		// Set the gas price to the limits from the CLI and start mining
-		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		ioncmini.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		// 启动挖矿
-		if err := ethereum.StartMining(true); err != nil {
+		if err := ioncmini.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

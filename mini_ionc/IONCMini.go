@@ -22,7 +22,7 @@ import (
 
 	"fmt"
 	"math/big"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	"sync"
 )
 
 type IONCMini struct {
@@ -44,6 +44,8 @@ type IONCMini struct {
 	miner     *miner.Miner	//挖矿
 	gasPrice  *big.Int
 	etherbase common.Address
+
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
 // New creates a new Ethereum object (including the
@@ -115,6 +117,7 @@ func (s *IONCMini) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *IONCMini) TxPool() *core.TxPool               { return s.txPool }
 func (s *IONCMini) ChainDb() ethdb.Database            { return s.chainDb }
 func (s *IONCMini) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *IONCMini) Engine() consensus.Engine           { return s.engine }
 
 func (s *IONCMini) Protocols() []p2p.Protocol {
 	return nil
@@ -123,7 +126,7 @@ func (s *IONCMini) Protocols() []p2p.Protocol {
 // Start implements node.Service, starting all internal goroutines needed by the
 // Ethereum protocol implementation.
 func (s *IONCMini) Start(srvr *p2p.Server) error {
-
+	return nil
 }
 
 // Stop implements node.Service, terminating all internal goroutines used by the
@@ -172,5 +175,50 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 }
 
 func (s *IONCMini) APIs() []rpc.API {
+	return nil
+}
+
+func (s *IONCMini) Etherbase() (eb common.Address, err error) {
+	s.lock.RLock()
+	etherbase := s.etherbase
+	s.lock.RUnlock()
+
+	if etherbase != (common.Address{}) {
+		return etherbase, nil
+	}
+	if wallets := s.AccountManager().Wallets(); len(wallets) > 0 {
+		if accounts := wallets[0].Accounts(); len(accounts) > 0 {
+			return accounts[0].Address, nil
+		}
+	}
+	return common.Address{}, fmt.Errorf("etherbase address must be explicitly specified")
+}
+
+//启动挖矿程序
+func (s *IONCMini) StartMining(local bool) error {
+
+	// 从命令行参数中获取矿工账号
+	eb, err := s.Etherbase()
+	if err != nil {
+		log.Error("Cannot start mining without etherbase", "err", err)
+		return fmt.Errorf("etherbase missing: %v", err)
+	}
+	/*// 如果是POA共识算法
+	if clique, ok := s.engine.(*clique.Clique); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		clique.Authorize(eb, wallet.SignHash)
+	}
+	if local {
+		// If local (CPU) mining is started, we can disable the transaction rejection
+		// mechanism introduced to speed sync times. CPU mining on mainnet is ludicrous
+		// so noone will ever hit this path, whereas marking sync done on CPU mining
+		// will ensure that private networks work in single miner mode too.
+		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
+	}*/
+	go s.miner.Start(eb)
 	return nil
 }
