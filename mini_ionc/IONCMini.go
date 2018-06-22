@@ -1,4 +1,4 @@
-package main
+package mini_ionc
 
 import (
 	"runtime"
