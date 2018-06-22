@@ -14,8 +14,7 @@ import (
 func (h Header) MarshalJSON() ([]byte, error) {
 	type Header struct {
 		ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-		UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-		Coinbase    common.Address `json:"miner"            gencodec:"required"`
+
 		Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -26,14 +25,16 @@ func (h Header) MarshalJSON() ([]byte, error) {
 		GasUsed     *hexutil.Big   `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big   `json:"timestamp"        gencodec:"required"`
 		Extra       hexutil.Bytes  `json:"extraData"        gencodec:"required"`
-		MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
-		Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 		Hash        common.Hash    `json:"hash"`
+		// 新增字段
+		BaseTarget *hexutil.Big                    `json:baseTarget              gencodec:"required"`   // baseTarget
+		Coinbase    common.Address `json:"miner"            gencodec:"required"`
+		BlockSignature hexutil.Bytes              `json:blockSignature          gencodec:"required"`   // 区块签名信息
+		GenerationSignature hexutil.Bytes           `json:generationSignature     gencodec:"required"`   // 生成签名信息
 	}
 	var enc Header
 	enc.ParentHash = h.ParentHash
-	enc.UncleHash = h.UncleHash
-	enc.Coinbase = h.Coinbase
+
 	enc.Root = h.Root
 	enc.TxHash = h.TxHash
 	enc.ReceiptHash = h.ReceiptHash
@@ -44,17 +45,19 @@ func (h Header) MarshalJSON() ([]byte, error) {
 	enc.GasUsed = (*hexutil.Big)(h.GasUsed)
 	enc.Time = (*hexutil.Big)(h.Time)
 	enc.Extra = h.Extra
-	enc.MixDigest = h.MixDigest
-	enc.Nonce = h.Nonce
 	enc.Hash = h.Hash()
+
+	enc.BaseTarget=(*hexutil.Big)(h.BaseTarget)
+	enc.Coinbase = h.Coinbase
+	enc.BlockSignature=h.BlockSignature
+	enc.GenerationSignature=h.GenerationSignature
 	return json.Marshal(&enc)
 }
 
 func (h *Header) UnmarshalJSON(input []byte) error {
 	type Header struct {
 		ParentHash  *common.Hash    `json:"parentHash"       gencodec:"required"`
-		UncleHash   *common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-		Coinbase    *common.Address `json:"miner"            gencodec:"required"`
+
 		Root        *common.Hash    `json:"stateRoot"        gencodec:"required"`
 		TxHash      *common.Hash    `json:"transactionsRoot" gencodec:"required"`
 		ReceiptHash *common.Hash    `json:"receiptsRoot"     gencodec:"required"`
@@ -65,8 +68,12 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		GasUsed     *hexutil.Big    `json:"gasUsed"          gencodec:"required"`
 		Time        *hexutil.Big    `json:"timestamp"        gencodec:"required"`
 		Extra       hexutil.Bytes   `json:"extraData"        gencodec:"required"`
-		MixDigest   *common.Hash    `json:"mixHash"          gencodec:"required"`
-		Nonce       *BlockNonce     `json:"nonce"            gencodec:"required"`
+
+		// 新增字段
+		BaseTarget  *hexutil.Big                    `json:baseTarget              gencodec:"required"`   // baseTarget
+		Coinbase    *common.Address `json:"miner"            gencodec:"required"`
+		BlockSignature hexutil.Bytes             `json:blockSignature          gencodec:"required"`   // 区块签名信息
+		GenerationSignature hexutil.Bytes           `json:generationSignature     gencodec:"required"`   // 生成签名信息
 	}
 	var dec Header
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -76,14 +83,8 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'parentHash' for Header")
 	}
 	h.ParentHash = *dec.ParentHash
-	if dec.UncleHash == nil {
-		return errors.New("missing required field 'sha3Uncles' for Header")
-	}
-	h.UncleHash = *dec.UncleHash
-	if dec.Coinbase == nil {
-		return errors.New("missing required field 'miner' for Header")
-	}
-	h.Coinbase = *dec.Coinbase
+
+
 	if dec.Root == nil {
 		return errors.New("missing required field 'stateRoot' for Header")
 	}
@@ -124,13 +125,28 @@ func (h *Header) UnmarshalJSON(input []byte) error {
 		return errors.New("missing required field 'extraData' for Header")
 	}
 	h.Extra = dec.Extra
-	if dec.MixDigest == nil {
-		return errors.New("missing required field 'mixHash' for Header")
+
+
+	// 新增字段
+	if dec.BaseTarget == nil {
+		return errors.New("missing required field 'miner' for Header")
 	}
-	h.MixDigest = *dec.MixDigest
-	if dec.Nonce == nil {
-		return errors.New("missing required field 'nonce' for Header")
+	h.BaseTarget = (*big.Int)(dec.BaseTarget)
+
+	if dec.Coinbase == nil {
+		return errors.New("missing required field 'Coinbase' for Header")
 	}
-	h.Nonce = *dec.Nonce
+	h.Coinbase = *dec.Coinbase
+
+	if dec.BlockSignature == nil {
+		return errors.New("missing required field 'BlockSignature' for Header")
+	}
+	h.BlockSignature = dec.BlockSignature
+
+	if dec.GenerationSignature == nil {
+		return errors.New("missing required field 'GenerationSignature' for Header")
+	}
+	h.GenerationSignature = dec.GenerationSignature
+
 	return nil
 }
