@@ -28,10 +28,11 @@ import (
 
 	cli "gopkg.in/urfave/cli.v1"
 
-	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
 	"github.com/ionchain/ionchain-core/contracts/release"
 	"github.com/ionchain/ionchain-core/dashboard"
-	"github.com/ionchain/ionchain-core/eth"
+	//"github.com/ionchain/ionchain-core/eth"
+	"github.com/ionchain/ionchain-core/mini_ionc"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/params"
 	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
@@ -77,7 +78,7 @@ type ethstatsConfig struct {
 }
 
 type gethConfig struct {
-	Eth       eth.Config
+	Eth       mini_ionc.Config
 	Shh       whisper.Config
 	Node      node.Config
 	Ethstats  ethstatsConfig
@@ -112,7 +113,7 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	// Load defaults.
 	cfg := gethConfig{
-		Eth:       eth.DefaultConfig,
+		Eth:       mini_ionc.DefaultConfig,
 		Shh:       whisper.DefaultConfig,
 		Node:      defaultNodeConfig(),
 		Dashboard: dashboard.DefaultConfig,
@@ -175,9 +176,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	}
 
 	// Add the Ethereum Stats daemon if requested.
-	if cfg.Ethstats.URL != "" {
+	/*if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
-	}
+	}*/
 
 	// Add the release oracle service so it boots along with node.
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
