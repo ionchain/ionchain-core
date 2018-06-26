@@ -159,7 +159,7 @@ func initGenesis(ctx *cli.Context) error {
 		utils.Fatalf("invalid genesis file: %v", err)
 	}
 	// Open an initialise both full and light databases
-	stack := makeFullNode(ctx)
+	/*stack := makeFullNode(ctx)
 	for _, name := range []string{"chaindata", "lightchaindata"} {
 		chaindb, err := stack.OpenDatabase(name, 0, 0)
 		if err != nil {
@@ -170,7 +170,7 @@ func initGenesis(ctx *cli.Context) error {
 			utils.Fatalf("Failed to write genesis block: %v", err)
 		}
 		log.Info("Successfully wrote genesis state", "database", name, "hash", hash)
-	}
+	}*/
 	return nil
 }
 
