@@ -45,13 +45,10 @@ var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 // fork switch-over blocks through the chain configuration.
 type Genesis struct {
 	Config     *params.ChainConfig `json:"config"`
-	Nonce      uint64              `json:"nonce"`
 	Timestamp  uint64              `json:"timestamp"`
 	ExtraData  []byte              `json:"extraData"`
 	GasLimit   uint64              `json:"gasLimit"   gencodec:"required"`
 	Difficulty *big.Int            `json:"difficulty" gencodec:"required"`
-	Mixhash    common.Hash         `json:"mixHash"`
-	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
@@ -59,6 +56,13 @@ type Genesis struct {
 	Number     uint64      `json:"number"`
 	GasUsed    uint64      `json:"gasUsed"`
 	ParentHash common.Hash `json:"parentHash"`
+
+	// 新增字段
+	BaseTarget *big.Int                    `json:baseTarget              gencodec:"required"`   // baseTarget
+	Coinbase   common.Address      `json:"coinbase"`
+	BlockSignature []byte                `json:blockSignature          gencodec:"required"`   // 区块签名信息
+	GenerationSignature []byte           `json:generationSignature     gencodec:"required"`   // 生成签名信息
+
 }
 
 // GenesisAlloc specifies the initial state that is part of the genesis block.
@@ -87,7 +91,6 @@ type GenesisAccount struct {
 
 // field type overrides for gencodec
 type genesisSpecMarshaling struct {
-	Nonce      math.HexOrDecimal64
 	Timestamp  math.HexOrDecimal64
 	ExtraData  hexutil.Bytes
 	GasLimit   math.HexOrDecimal64
@@ -234,17 +237,18 @@ func (g *Genesis) ToBlock() (*types.Block, *state.StateDB) {
 	}
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
-		Number:     new(big.Int).SetUint64(g.Number),
-		//Nonce:      types.EncodeNonce(g.Nonce),
-		Time:       new(big.Int).SetUint64(g.Timestamp),
-		ParentHash: g.ParentHash,
-		Extra:      g.ExtraData,
-		GasLimit:   new(big.Int).SetUint64(g.GasLimit),
-		GasUsed:    new(big.Int).SetUint64(g.GasUsed),
-		Difficulty: g.Difficulty,
-		//MixDigest:  g.Mixhash,
-		Coinbase:   g.Coinbase,
-		Root:       root,
+		Number:     			new(big.Int).SetUint64(g.Number),
+		Time:       			new(big.Int).SetUint64(g.Timestamp),
+		ParentHash: 			g.ParentHash,
+		Extra:      			g.ExtraData,
+		GasLimit:   			new(big.Int).SetUint64(g.GasLimit),
+		GasUsed:    			new(big.Int).SetUint64(g.GasUsed),
+		Difficulty: 			g.Difficulty,
+		Coinbase:   			g.Coinbase,
+		Root:       			root,
+		BaseTarget: 			g.BaseTarget,
+		BlockSignature: 		g.BlockSignature,
+		GenerationSignature: 	g.GenerationSignature,
 	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
@@ -310,7 +314,6 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.MainnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
@@ -322,7 +325,6 @@ func DefaultGenesisBlock() *Genesis {
 func DefaultTestnetGenesisBlock() *Genesis {
 	return &Genesis{
 		Config:     params.TestnetChainConfig,
-		Nonce:      66,
 		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
