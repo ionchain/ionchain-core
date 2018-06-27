@@ -18,7 +18,7 @@ package main
 
 import (
 	"bufio"
-	"encoding/hex"
+	//"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -29,7 +29,7 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
-	"github.com/ionchain/ionchain-core/contracts/release"
+	//"github.com/ionchain/ionchain-core/contracts/release"
 	"github.com/ionchain/ionchain-core/dashboard"
 	//"github.com/ionchain/ionchain-core/eth"
 	"github.com/ionchain/ionchain-core/mini_ionc"
@@ -159,7 +159,7 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	// 向stack中加入以太坊客户端
 	utils.RegisterEthService(stack, &cfg.Eth)
 
-	if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {
+	/*if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {
 		utils.RegisterDashboardService(stack, &cfg.Dashboard)
 	}
 	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
@@ -176,9 +176,9 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 	}
 
 	// Add the Ethereum Stats daemon if requested.
-	/*if cfg.Ethstats.URL != "" {
+	if cfg.Ethstats.URL != "" {
 		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
-	}*/
+	}
 
 	// Add the release oracle service so it boots along with node.
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
@@ -193,7 +193,7 @@ func makeFullNode(ctx *cli.Context) *node.Node {
 		return release.NewReleaseService(ctx, config)
 	}); err != nil {
 		utils.Fatalf("Failed to register the Geth release oracle service: %v", err)
-	}
+	}*/
 	return stack
 }
 
