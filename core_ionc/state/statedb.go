@@ -42,11 +42,11 @@ type revision struct {
 // * Contracts
 // * Accounts
 type StateDB struct {
-	db   Database
-	trie Trie
+	db   Database // 三级缓存 将trie中的节点存储到数据上中
+	trie Trie	// 二级缓存
 
 	// This map holds 'live' objects, which will get modified while processing a state transition.
-	stateObjects      map[common.Address]*stateObject
+	stateObjects      map[common.Address]*stateObject	// 一级缓存 stateObject存储到trie中
 	stateObjectsDirty map[common.Address]struct{}
 
 	// DB error.
