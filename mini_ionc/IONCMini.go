@@ -197,7 +197,7 @@ func (s *IONCMini) Etherbase() (eb common.Address, err error) {
 //启动挖矿程序
 func (s *IONCMini) StartMining(local bool) error {
 
-	// 从命令行参数中获取矿工账号
+	// 从命令行参数中获取矿工账号，如果命令行中不指定一个账户，那么取第一个钱包中的第一个账户
 	eb, err := s.Etherbase()
 	if err != nil {
 		log.Error("Cannot start mining without etherbase", "err", err)
