@@ -413,14 +413,14 @@ func (self *worker) commitNewWork() {
 	tstamp := tstart.Unix()
 	// 父块时间大于当前时间
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
+		tstamp = parent.Time().Int64() + 1 // 修正当前时间，tstamp>parent.Time
 	}
 	// this will ensure we're not going off too far in the future
 	// 现在的时间落后于父区块的时间，所以需要休眠一段时间
-	if now := time.Now().Unix(); tstamp > now+1 {
+	if now := time.Now().Unix(); tstamp > now+1 { // 如果tstamp大于当前时间，说明节点time.now远远落后于网络上的区块时间
 		wait := time.Duration(tstamp-now) * time.Second
 		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
-		time.Sleep(wait)
+		time.Sleep(wait) //休眠一段时间，赶上网络中的区块时间（parent.time)
 	}
 
 	num := parent.Number()
@@ -433,7 +433,7 @@ func (self *worker) commitNewWork() {
 		Time:       big.NewInt(tstamp),
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
-	if atomic.LoadInt32(&self.mining) == 1 {
+	if atomic.LoadInt32(&self.mining) == 1 { // 判断是否处于挖矿的状态
 		header.Coinbase = self.coinbase // 设置coinbase
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil { // 更新当前区块的难度

@@ -103,9 +103,12 @@ func (v *BlockValidator) ValidateState(block, parent *types.Block, statedb *stat
 // CalcGasLimit computes the gas limit of the next block after parent.
 // The result may be modified by the caller.
 // This is miner strategy, not consensus protocol.
+// 计算父区块下一个区块的gas limit
+// 计算的结果可以被caller修改
+// 这是矿工的策略，不属于共识协议
 func CalcGasLimit(parent *types.Block) *big.Int {
 	// contrib = (parentGasUsed * 3 / 2) / 1024
-	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3))
+	contrib := new(big.Int).Mul(parent.GasUsed(), big.NewInt(3)) // 父区块gas used 的数量 乘以 3
 	contrib = contrib.Div(contrib, big.NewInt(2))
 	contrib = contrib.Div(contrib, params.GasLimitBoundDivisor)
 
@@ -119,6 +122,10 @@ func CalcGasLimit(parent *types.Block) *big.Int {
 		increase it, otherwise lower it (or leave it unchanged if it's right
 		at that usage) the amount increased/decreased depends on how far away
 		from parentGasLimit * (2/3) parentGasUsed is.
+
+		strategy：待挖区块的 gaslimit 由父区块的 gasUsed 值决定，如果parentGasUsed > parentGasLimit * (2/3)
+		那么我们增加gasLimit，否者我们减少gasLimit（或者保持不动），gasLimit的增加减少取决于parentGasUsed距离parentGasLimit * (2/3)
+		的远近程度
 	*/
 	gl := new(big.Int).Sub(parent.GasLimit(), decay)
 	gl = gl.Add(gl, contrib)
