@@ -31,17 +31,17 @@ type IONCMini struct {
 
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
-	accountManager *accounts.Manager	//账户管理
-	txPool          *core.TxPool	//交易池
-	blockchain      *core.BlockChain	//区块链
+	accountManager *accounts.Manager //账户管理
+	txPool         *core.TxPool      //交易池
+	blockchain     *core.BlockChain  //区块链
 
 	// DB interfaces
 	// leveldb数据库
 	chainDb ethdb.Database // Block chain database
 
-	eventMux       *event.TypeMux
-	engine         consensus.Engine	//共识引擎
-	miner     *miner.Miner	//挖矿
+	eventMux  *event.TypeMux
+	engine    consensus.Engine //共识引擎
+	miner     *miner.Miner     //挖矿
 	gasPrice  *big.Int
 	etherbase common.Address
 
@@ -50,13 +50,13 @@ type IONCMini struct {
 
 // New creates a new Ethereum object (including the
 // initialisation of the common Ethereum object)
-func New(ctx *node.ServiceContext,config *Config) (*IONCMini, error) {
+func New(ctx *node.ServiceContext, config *Config) (*IONCMini, error) {
 
-	chainDb, err := CreateDB(ctx, config, "chaindata")		// 创建leveldb数据库
+	chainDb, err := CreateDB(ctx, config, "chaindata") // 创建leveldb数据库
 	if err != nil {
 		return nil, err
 	}
-	stopDbUpgrade := upgradeDeduplicateData(chainDb)	// 数据库格式升级
+	stopDbUpgrade := upgradeDeduplicateData(chainDb) // 数据库格式升级
 	// 设置创世区块。 如果数据库里面已经有创世区块那么从数据库里面取出(私链)。或者是从代码里面获取默认值。
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlock(chainDb, config.Genesis)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
@@ -69,6 +69,7 @@ func New(ctx *node.ServiceContext,config *Config) (*IONCMini, error) {
 		config:         config,
 		chainDb:        chainDb,
 		chainConfig:    chainConfig,
+		eventMux:       ctx.EventMux,
 		accountManager: ctx.AccountManager,
 		engine:         CreateConsensusEngine(ctx, config, chainConfig, chainDb), //共识引擎
 		stopDbUpgrade:  stopDbUpgrade,
@@ -112,12 +113,12 @@ func New(ctx *node.ServiceContext,config *Config) (*IONCMini, error) {
 	return eth, nil
 }
 
-func (s *IONCMini) AccountManager() *accounts.Manager  { return s.accountManager }
-func (s *IONCMini) BlockChain() *core.BlockChain       { return s.blockchain }
-func (s *IONCMini) TxPool() *core.TxPool               { return s.txPool }
-func (s *IONCMini) ChainDb() ethdb.Database            { return s.chainDb }
-func (s *IONCMini) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *IONCMini) Engine() consensus.Engine           { return s.engine }
+func (s *IONCMini) AccountManager() *accounts.Manager { return s.accountManager }
+func (s *IONCMini) BlockChain() *core.BlockChain      { return s.blockchain }
+func (s *IONCMini) TxPool() *core.TxPool              { return s.txPool }
+func (s *IONCMini) ChainDb() ethdb.Database           { return s.chainDb }
+func (s *IONCMini) EventMux() *event.TypeMux          { return s.eventMux }
+func (s *IONCMini) Engine() consensus.Engine          { return s.engine }
 
 func (s *IONCMini) Protocols() []p2p.Protocol {
 	return nil
@@ -133,7 +134,6 @@ func (s *IONCMini) Start(srvr *p2p.Server) error {
 // Ethereum protocol.
 func (s *IONCMini) Stop() error {
 
-
 	return nil
 }
 
@@ -148,7 +148,6 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 	}
 	return db, nil
 }
-
 
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
@@ -219,6 +218,16 @@ func (s *IONCMini) StartMining(local bool) error {
 		// will ensure that private networks work in single miner mode too.
 		atomic.StoreUint32(&s.protocolManager.acceptTxs, 1)
 	}*/
+
+	// ipos
+	if ipos, ok := s.engine.(*ipos.IPos); ok {
+		wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
+		if wallet == nil || err != nil {
+			log.Error("Etherbase account unavailable locally", "err", err)
+			return fmt.Errorf("signer missing: %v", err)
+		}
+		ipos.Authorize(eb, wallet.SignHash)
+	}
 	go s.miner.Start(eb)
 	return nil
 }

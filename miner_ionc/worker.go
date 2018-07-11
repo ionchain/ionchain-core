@@ -34,7 +34,6 @@ import (
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
-	"gopkg.in/fatih/set.v0"
 )
 
 const (
@@ -65,7 +64,7 @@ type Work struct {
 	signer types.Signer
 
 	state     *state.StateDB // apply state changes here
-	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
+	//ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
 	//family    *set.Set       // family set (used for checking uncle invalidity)
 	//uncles    *set.Set       // uncle set
 	tcount    int            // tx count in cycle
@@ -377,7 +376,7 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 		config:    self.config,
 		signer:    types.NewEIP155Signer(self.config.ChainId),
 		state:     state,
-		ancestors: set.New(),
+		//ancestors: set.New(),
 		//family:    set.New(),
 		//uncles:    set.New(),
 		header:    header,
@@ -385,13 +384,13 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
-	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
+	//for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
 		/*for _, uncle := range ancestor.Uncles() {
 			work.family.Add(uncle.Hash())
 		}*/
 		//work.family.Add(ancestor.Hash())
-		work.ancestors.Add(ancestor.Hash())
-	}
+		//work.ancestors.Add(ancestor.Hash())
+	//}
 
 	// Keep track of transactions which return errors so they can be removed
 	work.tcount = 0
@@ -431,6 +430,9 @@ func (self *worker) commitNewWork() {
 		GasUsed:    new(big.Int),
 		Extra:      self.extra,
 		Time:       big.NewInt(tstamp),
+
+		BaseTarget: new(big.Int),
+
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
 	if atomic.LoadInt32(&self.mining) == 1 { // 判断是否处于挖矿的状态
