@@ -151,9 +151,9 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
-		// create default extradata
+		// create default extradata 创建默认extradata
 		extra, _ = rlp.EncodeToBytes([]interface{}{
-			uint(params.VersionMajor<<16 | params.VersionMinor<<8 | params.VersionPatch),
+			uint(params.VersionMajor<<16 | params.VersionMinor<<8 | params.VersionPatch), //版本号
 			"geth",
 			runtime.Version(),
 			runtime.GOOS,
