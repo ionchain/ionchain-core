@@ -63,7 +63,6 @@ func sigHash(header *types.Header) (hash common.Hash) {
 
 		header.BaseTarget,
 		header.Coinbase,
-		header.BlockSignature,
 		header.GenerationSignature,
 	})
 	hasher.Sum(hash[:0])

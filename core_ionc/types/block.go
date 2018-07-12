@@ -33,7 +33,7 @@ import (
 )
 
 var (
-	EmptyRootHash  = DeriveSha(Transactions{})
+	EmptyRootHash = DeriveSha(Transactions{})
 )
 
 //go:generate gencodec -type Header -field-override headerMarshaling -out gen_header_json.go
@@ -41,25 +41,24 @@ var (
 // Header represents a block header in the Ethereum blockchain.
 // 生成挖矿的数据 通过这些数据寻找nonce
 type Header struct {
-	ParentHash  common.Hash                `json:"parentHash"            gencodec:"required"`
+	ParentHash common.Hash `json:"parentHash"            gencodec:"required"`
 
-	Root        common.Hash                `json:"stateRoot"             gencodec:"required"`
-	TxHash      common.Hash                `json:"transactionsRoot"      gencodec:"required"`
-	ReceiptHash common.Hash                `json:"receiptsRoot"          gencodec:"required"`
-	Bloom       Bloom                      `json:"logsBloom"             gencodec:"required"`
-	Difficulty  *big.Int                   `json:"difficulty"            gencodec:"required"`  // 可以存储累计难度
-	Number      *big.Int                   `json:"number"                gencodec:"required"`
-	GasLimit    *big.Int                   `json:"gasLimit"              gencodec:"required"`
-	GasUsed     *big.Int                   `json:"gasUsed"               gencodec:"required"`
-	Time        *big.Int                   `json:"timestamp"             gencodec:"required"`
-	Extra       []byte                     `json:"extraData"             gencodec:"required"`
-//新增字段
-	BaseTarget *big.Int                    `json:baseTarget              gencodec:"required"`   // baseTarget
-	Coinbase    common.Address             `json:"miner"                 gencodec:"required"`	// 矿工 公钥
-	BlockSignature []byte                `json:blockSignature          gencodec:"required"`   // 区块签名信息
-	GenerationSignature []byte           `json:generationSignature     gencodec:"required"`   // 生成签名信息
+	Root        common.Hash `json:"stateRoot"             gencodec:"required"`
+	TxHash      common.Hash `json:"transactionsRoot"      gencodec:"required"`
+	ReceiptHash common.Hash `json:"receiptsRoot"          gencodec:"required"`
+	Bloom       Bloom       `json:"logsBloom"             gencodec:"required"`
+	Difficulty  *big.Int    `json:"difficulty"            gencodec:"required"` // 可以存储累计难度
+	Number      *big.Int    `json:"number"                gencodec:"required"`
+	GasLimit    *big.Int    `json:"gasLimit"              gencodec:"required"`
+	GasUsed     *big.Int    `json:"gasUsed"               gencodec:"required"`
+	Time        *big.Int    `json:"timestamp"             gencodec:"required"`
+	Extra       []byte      `json:"extraData"             gencodec:"required"`
+	//新增字段
+	BaseTarget          *big.Int       `json:baseTarget              gencodec:"required"` // baseTarget
+	Coinbase            common.Address `json:"miner"                 gencodec:"required"` // 矿工 公钥
+	BlockSignature      []byte         `json:blockSignature          gencodec:"required"` // 区块签名信息
+	GenerationSignature []byte         `json:generationSignature     gencodec:"required"` // 生成签名信息
 }
-
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
@@ -68,6 +67,7 @@ func (h *Header) Hash() common.Hash {
 }
 
 // HashNoNonce returns the hash which is used as input for the proof-of-work search.
+// 暂不需要
 func (h *Header) HashNoNonce() common.Hash {
 	return rlpHash([]interface{}{
 		h.ParentHash,
@@ -203,6 +203,12 @@ func CopyHeader(h *Header) *Header {
 		cpy.Extra = make([]byte, len(h.Extra))
 		copy(cpy.Extra, h.Extra)
 	}
+
+	//新增字段
+	if cpy.BaseTarget = new(big.Int); h.BaseTarget != nil {
+		cpy.BaseTarget.Set(h.BaseTarget)
+	}
+
 	return &cpy
 }
 
@@ -264,6 +270,11 @@ func (b *Block) TxHash() common.Hash      { return b.header.TxHash }
 func (b *Block) ReceiptHash() common.Hash { return b.header.ReceiptHash }
 func (b *Block) Extra() []byte            { return common.CopyBytes(b.header.Extra) }
 
+//新增字段
+func (b *Block) BaseTarget() *big.Int        { return new(big.Int).Set(b.header.BaseTarget) }
+func (b *Block) BlockSignature() []byte      { return common.CopyBytes(b.header.BlockSignature) }
+func (b *Block) GenerationSignature() []byte { return common.CopyBytes(b.header.GenerationSignature) }
+
 func (b *Block) Header() *Header { return CopyHeader(b.header) }
 
 // Body returns the non-header content of the block.
@@ -289,7 +300,6 @@ func (c *writeCounter) Write(b []byte) (int, error) {
 	*c += writeCounter(len(b))
 	return len(b), nil
 }
-
 
 // WithSeal returns a new block with the data from b but the header replaced with
 // the sealed one.
@@ -338,19 +348,37 @@ Transactions:
 func (h *Header) String() string {
 	return fmt.Sprintf(`Header(%x):
 [
-	ParentHash:	    %x
-	Coinbase:	    %x
-	Root:		    %x
-	TxSha		    %x
-	ReceiptSha:	    %x
-	Bloom:		    %x
-	Difficulty:	    %v
-	Number:		    %v
-	GasLimit:	    %v
-	GasUsed:	    %v
-	Time:		    %v
-	Extra:		    %s
-]`, h.Hash(), h.ParentHash, h.Coinbase, h.Root, h.TxHash, h.ReceiptHash, h.Bloom, h.Difficulty, h.Number, h.GasLimit, h.GasUsed, h.Time, h.Extra)
+	ParentHash:	         %x
+	Coinbase:	         %x
+	Root:		         %x
+	TxSha		         %x
+	ReceiptSha:	         %x
+	Bloom:		         %x
+	Difficulty:	         %v
+	Number:		         %v
+	GasLimit:	         %v
+	GasUsed:	         %v
+	Time:		         %v
+	Extra:		         %s
+	BaseTarget	         %x
+	BlockSignature       %s
+	GenerationSignature  %s
+]`, h.Hash(),
+		h.ParentHash,
+		h.Coinbase,
+		h.Root,
+		h.TxHash,
+		h.ReceiptHash,
+		h.Bloom,
+		h.Difficulty,
+		h.Number,
+		h.GasLimit,
+		h.GasUsed,
+		h.Time,
+		h.Extra,
+		h.BaseTarget,
+		h.BlockSignature,
+		h.GenerationSignature)
 }
 
 type Blocks []*Block
