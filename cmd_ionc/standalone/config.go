@@ -33,7 +33,7 @@ import (
 	"github.com/ionchain/ionchain-core/dashboard"
 	//"github.com/ionchain/ionchain-core/eth"
 	"github.com/ionchain/ionchain-core/mini_ionc"
-	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/node_ionc"
 	"github.com/ionchain/ionchain-core/params"
 	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 	"github.com/naoina/toml"

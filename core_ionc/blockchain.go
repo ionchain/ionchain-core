@@ -812,7 +812,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 
 	// Irrelevant of the canonical status, write the block itself to the database
 	// 以下两个操作 与主链操作无关，将block存储数据库中
-	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil {
+	if err := bc.hc.WriteTd(block.Hash(), block.NumberU64(), externTd); err != nil { //记录难度（TD）
 		return NonStatTy, err
 	}
 	// Write other block data using a batch.
@@ -835,15 +835,16 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// 第二个表达式 ((externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))
 	// 是为了减少自私挖矿的可能性.
 	reorg := externTd.Cmp(localTd) > 0
-	if !reorg && externTd.Cmp(localTd) == 0 {
+	if !reorg && externTd.Cmp(localTd) == 0 { // 难度相等
 		// Split same-difficulty blocks by number, then at random
+		// 根据区块编号分裂出两个难度相同的链，如果两个block number 相同 50%概率重整,如果新的block number 小于 当前的block number 重整
 		reorg = block.NumberU64() < bc.currentBlock.NumberU64() || (block.NumberU64() == bc.currentBlock.NumberU64() && mrand.Float64() < 0.5)
 	}
 	if reorg {
 		// Reorganise the chain if the parent is not the head block
 		// 新的链的总难度大于本地链的总难度的情况下，需要用新的区块链来替换本地的区块链为规范链。
 		if block.ParentHash() != bc.currentBlock.Hash() {
-			if err := bc.reorg(bc.currentBlock, block); err != nil {
+			if err := bc.reorg(bc.currentBlock, block); err != nil { // 重整区块链，侧链处理
 				return NonStatTy, err
 			}
 		}

@@ -26,9 +26,9 @@ import (
 	"time"
 
 	ethereum "github.com/ionchain/ionchain-core"
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/karalabe/hid"
 )

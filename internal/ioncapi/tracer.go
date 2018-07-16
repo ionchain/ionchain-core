@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package ethapi
+package ioncapi
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ import (
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
-	"github.com/ionchain/ionchain-core/core/vm"
+	"github.com/ionchain/ionchain-core/core_ionc/vm"
 	"github.com/robertkrimen/otto"
 )
 

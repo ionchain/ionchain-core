@@ -25,9 +25,9 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/ionchain/ionchain-core/accounts"
-	"github.com/ionchain/ionchain-core/accounts/keystore"
-	"github.com/ionchain/ionchain-core/accounts/usbwallet"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
+	"github.com/ionchain/ionchain-core/accounts_ionc/keystore"
+	"github.com/ionchain/ionchain-core/accounts_ionc/usbwallet"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/crypto"
 	"github.com/ionchain/ionchain-core/log"

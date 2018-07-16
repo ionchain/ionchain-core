@@ -14,16 +14,16 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package eth
+package mini_ionc
 
 import (
 	"time"
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/bitutil"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/bloombits"
-	"github.com/ionchain/ionchain-core/core/types"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/bloombits"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/params"
 )
@@ -48,7 +48,7 @@ const (
 
 // startBloomHandlers starts a batch of goroutines to accept bloom bit database
 // retrievals from possibly a range of filters and serving the data to satisfy.
-func (eth *Ethereum) startBloomHandlers() {
+func (eth *IONCMini) startBloomHandlers() {
 	for i := 0; i < bloomServiceThreads; i++ {
 		go func() {
 			for {

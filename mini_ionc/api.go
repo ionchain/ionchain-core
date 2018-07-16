@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package eth
+package mini_ionc
 
 import (
 	"bytes"
@@ -30,13 +30,13 @@ import (
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/state"
-	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/state"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
+	"github.com/ionchain/ionchain-core/core_ionc/vm"
+	ethapi "github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/log"
-	"github.com/ionchain/ionchain-core/miner"
+	miner "github.com/ionchain/ionchain-core/miner_ionc"
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/rlp"
 	"github.com/ionchain/ionchain-core/rpc"
@@ -48,11 +48,11 @@ const defaultTraceTimeout = 5 * time.Second
 // PublicEthereumAPI provides an API to access Ethereum full node-related
 // information.
 type PublicEthereumAPI struct {
-	e *Ethereum
+	e *IONCMini
 }
 
 // NewPublicEthereumAPI creates a new Ethereum protocol API for full nodes.
-func NewPublicEthereumAPI(e *Ethereum) *PublicEthereumAPI {
+func NewPublicEthereumAPI(e *IONCMini) *PublicEthereumAPI {
 	return &PublicEthereumAPI{e}
 }
 
@@ -67,22 +67,25 @@ func (api *PublicEthereumAPI) Coinbase() (common.Address, error) {
 }
 
 // Hashrate returns the POW hashrate
-func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
+/*func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
 	return hexutil.Uint64(api.e.Miner().HashRate())
-}
+}*/
 
 // PublicMinerAPI provides an API to control the miner.
 // It offers only methods that operate on data that pose no security risk when it is publicly accessible.
 type PublicMinerAPI struct {
-	e     *Ethereum
-	agent *miner.RemoteAgent
+	e     *IONCMini
+	//agent *miner.RemoteAgent
+	agent *miner.ForgeAgent
 }
 
 // NewPublicMinerAPI create a new PublicMinerAPI instance.
-func NewPublicMinerAPI(e *Ethereum) *PublicMinerAPI {
-	agent := miner.NewRemoteAgent(e.BlockChain(), e.Engine())
-	e.Miner().Register(agent)
+func NewPublicMinerAPI(e *IONCMini) *PublicMinerAPI {
+	//agent := miner.NewRemoteAgent(e.BlockChain(), e.Engine())
+	//e.Miner().Register(agent)
 
+	agent := miner.NewForgeAgent(e.BlockChain(), e.Engine())
+	e.Miner().Register(agent)
 	return &PublicMinerAPI{e, agent}
 }
 
@@ -93,15 +96,15 @@ func (api *PublicMinerAPI) Mining() bool {
 
 // SubmitWork can be used by external miner to submit their POW solution. It returns an indication if the work was
 // accepted. Note, this is not an indication if the provided work was valid!
-func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest common.Hash) bool {
+/*func (api *PublicMinerAPI) SubmitWork(nonce types.BlockNonce, solution, digest common.Hash) bool {
 	return api.agent.SubmitWork(nonce, digest, solution)
-}
+}*/
 
 // GetWork returns a work package for external miner. The work package consists of 3 strings
 // result[0], 32 bytes hex encoded current block header pow-hash
 // result[1], 32 bytes hex encoded seed hash used for DAG
 // result[2], 32 bytes hex encoded boundary condition ("target"), 2^256/difficulty
-func (api *PublicMinerAPI) GetWork() ([3]string, error) {
+/*func (api *PublicMinerAPI) GetWork() ([3]string, error) {
 	if !api.e.IsMining() {
 		if err := api.e.StartMining(false); err != nil {
 			return [3]string{}, err
@@ -112,24 +115,24 @@ func (api *PublicMinerAPI) GetWork() ([3]string, error) {
 		return work, fmt.Errorf("mining not ready: %v", err)
 	}
 	return work, nil
-}
+}*/
 
 // SubmitHashrate can be used for remote miners to submit their hash rate. This enables the node to report the combined
 // hash rate of all miners which submit work through this node. It accepts the miner hash rate and an identifier which
 // must be unique between nodes.
-func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Hash) bool {
+/*func (api *PublicMinerAPI) SubmitHashrate(hashrate hexutil.Uint64, id common.Hash) bool {
 	api.agent.SubmitHashrate(id, uint64(hashrate))
 	return true
-}
+}*/
 
 // PrivateMinerAPI provides private RPC methods to control the miner.
 // These methods can be abused by external users and must be considered insecure for use by untrusted users.
 type PrivateMinerAPI struct {
-	e *Ethereum
+	e *IONCMini
 }
 
 // NewPrivateMinerAPI create a new RPC service which controls the miner of this node.
-func NewPrivateMinerAPI(e *Ethereum) *PrivateMinerAPI {
+func NewPrivateMinerAPI(e *IONCMini) *PrivateMinerAPI {
 	return &PrivateMinerAPI{e: e}
 }
 
@@ -203,19 +206,19 @@ func (api *PrivateMinerAPI) SetEtherbase(etherbase common.Address) bool {
 }
 
 // GetHashrate returns the current hashrate of the miner.
-func (api *PrivateMinerAPI) GetHashrate() uint64 {
+/*func (api *PrivateMinerAPI) GetHashrate() uint64 {
 	return uint64(api.e.miner.HashRate())
-}
+}*/
 
 // PrivateAdminAPI is the collection of Ethereum full node-related APIs
 // exposed over the private admin endpoint.
 type PrivateAdminAPI struct {
-	eth *Ethereum
+	eth *IONCMini
 }
 
 // NewPrivateAdminAPI creates a new API definition for the full node private
 // admin methods of the Ethereum service.
-func NewPrivateAdminAPI(eth *Ethereum) *PrivateAdminAPI {
+func NewPrivateAdminAPI(eth *IONCMini) *PrivateAdminAPI {
 	return &PrivateAdminAPI{eth: eth}
 }
 
@@ -303,12 +306,12 @@ func (api *PrivateAdminAPI) ImportChain(file string) (bool, error) {
 // PublicDebugAPI is the collection of Ethereum full node APIs exposed
 // over the public debugging endpoint.
 type PublicDebugAPI struct {
-	eth *Ethereum
+	eth *IONCMini
 }
 
 // NewPublicDebugAPI creates a new API definition for the full node-
 // related public debug methods of the Ethereum service.
-func NewPublicDebugAPI(eth *Ethereum) *PublicDebugAPI {
+func NewPublicDebugAPI(eth *IONCMini) *PublicDebugAPI {
 	return &PublicDebugAPI{eth: eth}
 }
 
@@ -341,12 +344,12 @@ func (api *PublicDebugAPI) DumpBlock(blockNr rpc.BlockNumber) (state.Dump, error
 // the private debugging endpoint.
 type PrivateDebugAPI struct {
 	config *params.ChainConfig
-	eth    *Ethereum
+	eth    *IONCMini
 }
 
 // NewPrivateDebugAPI creates a new API definition for the full node-related
 // private debug methods of the Ethereum service.
-func NewPrivateDebugAPI(config *params.ChainConfig, eth *Ethereum) *PrivateDebugAPI {
+func NewPrivateDebugAPI(config *params.ChainConfig, eth *IONCMini) *PrivateDebugAPI {
 	return &PrivateDebugAPI{config: config, eth: eth}
 }
 

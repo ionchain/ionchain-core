@@ -19,7 +19,7 @@ package node
 import (
 	"reflect"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/p2p"

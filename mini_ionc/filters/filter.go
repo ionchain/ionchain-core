@@ -21,9 +21,9 @@ import (
 	"math/big"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core"
+	core "github.com/ionchain/ionchain-core/core_ionc"
 	"github.com/ionchain/ionchain-core/core/bloombits"
-	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/rpc"
@@ -41,7 +41,7 @@ type Backend interface {
 	SubscribeLogsEvent(ch chan<- []*types.Log) event.Subscription
 
 	BloomStatus() (uint64, uint64)
-	ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
+	//ServiceFilter(ctx context.Context, session *bloombits.MatcherSession)
 }
 
 // Filter can be used to retrieve and filter logs.
@@ -141,7 +141,7 @@ func (f *Filter) indexedLogs(ctx context.Context, end uint64) ([]*types.Log, err
 	}
 	defer session.Close()
 
-	f.backend.ServiceFilter(ctx, session)
+	//f.backend.ServiceFilter(ctx, session)
 
 	// Iterate over the matches until exhausted or context closed
 	var logs []*types.Log

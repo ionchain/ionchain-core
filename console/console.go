@@ -357,7 +357,7 @@ func (c *Console) Interactive() {
 						}
 					}
 				}
-				c.Evaluate(input)
+				c.Evaluate(input) // 执行控制台输入的命令
 				input = ""
 			}
 		}

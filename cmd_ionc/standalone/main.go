@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ionchain/ionchain-core/accounts"
-	"github.com/ionchain/ionchain-core/accounts/keystore"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
+	"github.com/ionchain/ionchain-core/accounts_ionc/keystore"
 	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/console"
@@ -35,7 +35,7 @@ import (
 	"github.com/ionchain/ionchain-core/internal/debug"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/metrics"
-	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/node_ionc"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -155,6 +155,10 @@ func init() {
 		removedbCommand,
 		dumpCommand,
 
+		// See consolecmd.go:
+		consoleCommand,
+		attachCommand,
+		javascriptCommand,
 		// See config.go
 		dumpConfigCommand,
 	}

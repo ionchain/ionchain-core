@@ -19,7 +19,7 @@ package bloombits
 import (
 	"errors"
 
-	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 )
 
 // errSectionOutOfBounds is returned if the user tried to add more bloom filters

@@ -27,7 +27,7 @@ import (
 	"github.com/ionchain/ionchain-core/common/hexutil"
 	core "github.com/ionchain/ionchain-core/core_ionc"
 	"github.com/ionchain/ionchain-core/eth/downloader"
-	"github.com/ionchain/ionchain-core/eth/gasprice"
+	"github.com/ionchain/ionchain-core/mini_ionc/gasprice"
 	"github.com/ionchain/ionchain-core/params"
 )
 

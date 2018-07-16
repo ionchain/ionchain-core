@@ -12,7 +12,7 @@ import (
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/crypto/sha3"
 	"sync"
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/rlp"
 )
 
@@ -168,7 +168,7 @@ func (c *IPos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	//cumulativeDifficulty
 	t, _ := new(big.Int).SetString("18446744073709551616", 10)
 	currentDiff := new(big.Int).Div(t, header.BaseTarget)
-	currentDiff = new(big.Int).Add(currentDiff, parent.Difficulty)
+	//currentDiff = new(big.Int).Add(currentDiff, parent.Difficulty) // 不做累计难度
 	header.Difficulty = currentDiff
 
 	return nil

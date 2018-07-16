@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package ethapi
+package ioncapi
 
 import (
 	"context"
@@ -24,15 +24,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ionchain/ionchain-core/accounts"
-	"github.com/ionchain/ionchain-core/accounts/keystore"
+	accounts "github.com/ionchain/ionchain-core/accounts_ionc"
+	"github.com/ionchain/ionchain-core/accounts_ionc/keystore"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
 	"github.com/ionchain/ionchain-core/common/math"
 	"github.com/ionchain/ionchain-core/consensus/ethash"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/core/vm"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
+	"github.com/ionchain/ionchain-core/core_ionc/vm"
 	"github.com/ionchain/ionchain-core/crypto"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/p2p"
@@ -65,9 +65,9 @@ func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 }
 
 // ProtocolVersion returns the current Ethereum protocol version this node supports
-func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
+/*func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
-}
+}*/
 
 // Syncing returns false in case the node is currently not syncing with the network. It can be up to date or has not
 // yet received the latest block headers from its pears. In case it is synchronizing:
@@ -76,7 +76,7 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (s *PublicEthereumAPI) Syncing() (interface{}, error) {
+/*func (s *PublicEthereumAPI) Syncing() (interface{}, error) {
 	progress := s.b.Downloader().Progress()
 
 	// Return not syncing if the synchronisation already completed
@@ -91,7 +91,7 @@ func (s *PublicEthereumAPI) Syncing() (interface{}, error) {
 		"pulledStates":  hexutil.Uint64(progress.PulledStates),
 		"knownStates":   hexutil.Uint64(progress.KnownStates),
 	}, nil
-}
+}*/
 
 // PublicTxPoolAPI offers and API for the transaction pool. It only operates on data that is non confidential.
 type PublicTxPoolAPI struct {
@@ -501,7 +501,7 @@ func (s *PublicBlockChainAPI) GetBlockByHash(ctx context.Context, blockHash comm
 
 // GetUncleByBlockNumberAndIndex returns the uncle block for the given block hash and index. When fullTx is true
 // all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
+/*func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context, blockNr rpc.BlockNumber, index hexutil.Uint) (map[string]interface{}, error) {
 	block, err := s.b.BlockByNumber(ctx, blockNr)
 	if block != nil {
 		uncles := block.Uncles()
@@ -513,11 +513,11 @@ func (s *PublicBlockChainAPI) GetUncleByBlockNumberAndIndex(ctx context.Context,
 		return s.rpcOutputBlock(block, false, false)
 	}
 	return nil, err
-}
+}*/
 
 // GetUncleByBlockHashAndIndex returns the uncle block for the given block hash and index. When fullTx is true
 // all transactions in the block are returned in full detail, otherwise only the transaction hash is returned.
-func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
+/*func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, blockHash common.Hash, index hexutil.Uint) (map[string]interface{}, error) {
 	block, err := s.b.GetBlock(ctx, blockHash)
 	if block != nil {
 		uncles := block.Uncles()
@@ -529,25 +529,25 @@ func (s *PublicBlockChainAPI) GetUncleByBlockHashAndIndex(ctx context.Context, b
 		return s.rpcOutputBlock(block, false, false)
 	}
 	return nil, err
-}
+}*/
 
 // GetUncleCountByBlockNumber returns number of uncles in the block for the given block number
-func (s *PublicBlockChainAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
+/*func (s *PublicBlockChainAPI) GetUncleCountByBlockNumber(ctx context.Context, blockNr rpc.BlockNumber) *hexutil.Uint {
 	if block, _ := s.b.BlockByNumber(ctx, blockNr); block != nil {
 		n := hexutil.Uint(len(block.Uncles()))
 		return &n
 	}
 	return nil
-}
+}*/
 
 // GetUncleCountByBlockHash returns number of uncles in the block for the given block hash
-func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
+/*func (s *PublicBlockChainAPI) GetUncleCountByBlockHash(ctx context.Context, blockHash common.Hash) *hexutil.Uint {
 	if block, _ := s.b.GetBlock(ctx, blockHash); block != nil {
 		n := hexutil.Uint(len(block.Uncles()))
 		return &n
 	}
 	return nil
-}
+}*/
 
 // GetCode returns the code stored at the given address in the state for the given block number.
 func (s *PublicBlockChainAPI) GetCode(ctx context.Context, address common.Address, blockNr rpc.BlockNumber) (hexutil.Bytes, error) {
@@ -768,9 +768,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"number":           (*hexutil.Big)(head.Number),
 		"hash":             b.Hash(),
 		"parentHash":       head.ParentHash,
-		"nonce":            head.Nonce,
-		"mixHash":          head.MixDigest,
-		"sha3Uncles":       head.UncleHash,
 		"logsBloom":        head.Bloom,
 		"stateRoot":        head.Root,
 		"miner":            head.Coinbase,
@@ -783,6 +780,9 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		"timestamp":        (*hexutil.Big)(head.Time),
 		"transactionsRoot": head.TxHash,
 		"receiptsRoot":     head.ReceiptHash,
+		"baseTarget": 		(*hexutil.Big)(head.BaseTarget),
+		"blockSignature": 	hexutil.Bytes(head.BlockSignature),
+		"generationSignature":hexutil.Bytes(head.GenerationSignature),
 	}
 
 	if inclTx {
@@ -806,13 +806,6 @@ func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx
 		}
 		fields["transactions"] = transactions
 	}
-
-	uncles := b.Uncles()
-	uncleHashes := make([]common.Hash, len(uncles))
-	for i, uncle := range uncles {
-		uncleHashes[i] = uncle.Hash()
-	}
-	fields["uncles"] = uncleHashes
 
 	return fields, nil
 }
@@ -1388,9 +1381,9 @@ func (api *PrivateDebugAPI) ChaindbCompact() error {
 }
 
 // SetHead rewinds the head of the blockchain to a previous block.
-func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
+/*func (api *PrivateDebugAPI) SetHead(number hexutil.Uint64) {
 	api.b.SetHead(uint64(number))
-}
+}*/
 
 // PublicNetAPI offers network related RPC methods
 type PublicNetAPI struct {

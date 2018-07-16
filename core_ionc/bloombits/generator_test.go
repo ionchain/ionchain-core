@@ -21,7 +21,7 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 )
 
 // Tests that batched bloom bits are correctly rotated from the input bloom

@@ -30,7 +30,7 @@ import (
 	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/internal/debug"
 	"github.com/ionchain/ionchain-core/log"
-	"github.com/ionchain/ionchain-core/node"
+	"github.com/ionchain/ionchain-core/node_ionc"
 	"github.com/ionchain/ionchain-core/rlp"
 )
 

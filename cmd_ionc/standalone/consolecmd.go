@@ -21,7 +21,7 @@ import (
 	"os/signal"
 	"strings"
 
-	"github.com/ionchain/ionchain-core/cmd/utils"
+	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
 	"github.com/ionchain/ionchain-core/console"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/rpc"

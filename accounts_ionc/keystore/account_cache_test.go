@@ -29,7 +29,7 @@ import (
 
 	"github.com/cespare/cp"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/common"
 )
 

@@ -22,7 +22,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/karalabe/hid"

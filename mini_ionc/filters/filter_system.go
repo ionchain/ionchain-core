@@ -26,8 +26,8 @@ import (
 	"time"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/types"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/rpc"
 )

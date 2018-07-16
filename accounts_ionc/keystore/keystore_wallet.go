@@ -20,8 +20,8 @@ import (
 	"math/big"
 
 	ethereum "github.com/ionchain/ionchain-core"
-	"github.com/ionchain/ionchain-core/accounts"
-	"github.com/ionchain/ionchain-core/core/types"
+	accounts "github.com/ionchain/ionchain-core/accounts_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 )
 
 // keystoreWallet implements the accounts.Wallet interface for the original

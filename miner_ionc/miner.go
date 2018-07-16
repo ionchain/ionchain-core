@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/common"
 	consensus "github.com/ionchain/ionchain-core/consensus_ionc"
 	core "github.com/ionchain/ionchain-core/core_ionc"

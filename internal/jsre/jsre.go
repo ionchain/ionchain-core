@@ -32,8 +32,8 @@ import (
 )
 
 var (
-	BigNumber_JS = deps.MustAsset("bignumber.js")
-	Web3_JS      = deps.MustAsset("web3.js")
+	BigNumber_JS = deps.MustAsset("bignumber.js") // bignumber.js 文件gzip字节
+	Web3_JS      = deps.MustAsset("web3.js") // web3.js 文件的gzip字节
 )
 
 /*

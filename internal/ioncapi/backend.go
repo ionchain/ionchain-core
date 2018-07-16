@@ -15,19 +15,19 @@
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package ethapi implements the general Ethereum API functions.
-package ethapi
+package ioncapi
 
 import (
 	"context"
 	"math/big"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	accounts "github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/state"
-	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/eth/downloader"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/state"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
+	"github.com/ionchain/ionchain-core/core_ionc/vm"
+	//"github.com/ionchain/ionchain-core/eth/downloader"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/params"
@@ -38,14 +38,14 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	// general Ethereum API
-	Downloader() *downloader.Downloader
-	ProtocolVersion() int
+	//Downloader() *downloader.Downloader
+	//ProtocolVersion() int
 	SuggestPrice(ctx context.Context) (*big.Int, error)
 	ChainDb() ethdb.Database
 	EventMux() *event.TypeMux
 	AccountManager() *accounts.Manager
 	// BlockChain API
-	SetHead(number uint64)
+	//SetHead(number uint64)
 	HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error)
 	BlockByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Block, error)
 	StateAndHeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*state.StateDB, *types.Header, error)

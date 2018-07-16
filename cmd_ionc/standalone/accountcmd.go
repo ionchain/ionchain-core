@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/ionchain/ionchain-core/accounts"
-	"github.com/ionchain/ionchain-core/accounts/keystore"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
+	"github.com/ionchain/ionchain-core/accounts_ionc/keystore"
 	"github.com/ionchain/ionchain-core/cmd_ionc/utils"
 	"github.com/ionchain/ionchain-core/console"
 	"github.com/ionchain/ionchain-core/crypto"

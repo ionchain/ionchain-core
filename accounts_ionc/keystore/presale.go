@@ -25,7 +25,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/crypto"
 	"github.com/pborman/uuid"
 	"golang.org/x/crypto/pbkdf2"

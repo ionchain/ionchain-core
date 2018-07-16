@@ -14,22 +14,21 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package eth
+package mini_ionc
 
 import (
 	"context"
 	"math/big"
 
-	"github.com/ionchain/ionchain-core/accounts"
+	"github.com/ionchain/ionchain-core/accounts_ionc"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/math"
-	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/core/bloombits"
-	"github.com/ionchain/ionchain-core/core/state"
-	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/eth/downloader"
-	"github.com/ionchain/ionchain-core/eth/gasprice"
+	core "github.com/ionchain/ionchain-core/core_ionc"
+	"github.com/ionchain/ionchain-core/core_ionc/state"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
+	"github.com/ionchain/ionchain-core/core_ionc/vm"
+	//"github.com/ionchain/ionchain-core/eth/downloader"
+	"github.com/ionchain/ionchain-core/mini_ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/params"
@@ -38,7 +37,7 @@ import (
 
 // EthApiBackend implements ethapi.Backend for full nodes
 type EthApiBackend struct {
-	eth *Ethereum
+	eth *IONCMini
 	gpo *gasprice.Oracle
 }
 
@@ -50,10 +49,10 @@ func (b *EthApiBackend) CurrentBlock() *types.Block {
 	return b.eth.blockchain.CurrentBlock()
 }
 
-func (b *EthApiBackend) SetHead(number uint64) {
+/*func (b *EthApiBackend) SetHead(number uint64) {
 	b.eth.protocolManager.downloader.Cancel()
 	b.eth.blockchain.SetHead(number)
-}
+}*/
 
 func (b *EthApiBackend) HeaderByNumber(ctx context.Context, blockNr rpc.BlockNumber) (*types.Header, error) {
 	// Pending block is only known by the miner
@@ -172,13 +171,13 @@ func (b *EthApiBackend) SubscribeTxPreEvent(ch chan<- core.TxPreEvent) event.Sub
 	return b.eth.TxPool().SubscribeTxPreEvent(ch)
 }
 
-func (b *EthApiBackend) Downloader() *downloader.Downloader {
+/*func (b *EthApiBackend) Downloader() *downloader.Downloader {
 	return b.eth.Downloader()
-}
+}*/
 
-func (b *EthApiBackend) ProtocolVersion() int {
+/*func (b *EthApiBackend) ProtocolVersion() int {
 	return b.eth.EthVersion()
-}
+}*/
 
 func (b *EthApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
@@ -201,8 +200,8 @@ func (b *EthApiBackend) BloomStatus() (uint64, uint64) {
 	return params.BloomBitsBlocks, sections
 }
 
-func (b *EthApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
+/*func (b *EthApiBackend) ServiceFilter(ctx context.Context, session *bloombits.MatcherSession) {
 	for i := 0; i < bloomFilterThreads; i++ {
 		go session.Multiplex(bloomRetrievalBatch, bloomRetrievalWait, b.eth.bloomRequests)
 	}
-}
+}*/

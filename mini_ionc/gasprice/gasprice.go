@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	ethapi "github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/rpc"
 )

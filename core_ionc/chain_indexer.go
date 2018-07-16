@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package core
+package core_ionc
 
 import (
 	"encoding/binary"
@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/core/types"
+	"github.com/ionchain/ionchain-core/core_ionc/types"
 	"github.com/ionchain/ionchain-core/ethdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
