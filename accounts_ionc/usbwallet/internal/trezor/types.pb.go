@@ -1179,7 +1179,7 @@ var E_WireBootloader = &proto.ExtensionDesc{
 	Filename:      "types.proto",
 }
 
-/*func init() {
+func init() {
 	proto.RegisterType((*HDNodeType)(nil), "HDNodeType")
 	proto.RegisterType((*HDNodePathType)(nil), "HDNodePathType")
 	proto.RegisterType((*CoinType)(nil), "CoinType")
@@ -1207,7 +1207,7 @@ var E_WireBootloader = &proto.ExtensionDesc{
 	proto.RegisterExtension(E_WireBootloader)
 }
 
-func init() { proto.RegisterFile("types.proto", fileDescriptor0) }*/
+func init() { proto.RegisterFile("types.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
 	// 1899 bytes of a gzipped FileDescriptorProto

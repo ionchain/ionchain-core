@@ -2783,7 +2783,7 @@ func (m *DebugLinkFlashErase) GetSector() uint32 {
 	return 0
 }
 
-/*func init() {
+func init() {
 	proto.RegisterType((*Initialize)(nil), "Initialize")
 	proto.RegisterType((*GetFeatures)(nil), "GetFeatures")
 	proto.RegisterType((*Features)(nil), "Features")
@@ -2858,9 +2858,9 @@ func (m *DebugLinkFlashErase) GetSector() uint32 {
 	proto.RegisterType((*DebugLinkMemoryWrite)(nil), "DebugLinkMemoryWrite")
 	proto.RegisterType((*DebugLinkFlashErase)(nil), "DebugLinkFlashErase")
 	proto.RegisterEnum("MessageType", MessageType_name, MessageType_value)
-}*/
+}
 
-/*func init() { proto.RegisterFile("messages.proto", fileDescriptor1) }*/
+func init() { proto.RegisterFile("messages.proto", fileDescriptor1) }
 
 var fileDescriptor1 = []byte{
 	// 3424 bytes of a gzipped FileDescriptorProto
