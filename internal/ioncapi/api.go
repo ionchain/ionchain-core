@@ -765,7 +765,7 @@ func FormatLogs(logs []vm.StructLog) []StructLogRes {
 func (s *PublicBlockChainAPI) rpcOutputBlock(b *types.Block, inclTx bool, fullTx bool) (map[string]interface{}, error) {
 	head := b.Header() // copies the header once
 	fields := map[string]interface{}{
-		"number":           (*hexutil.Big)(head.Number),
+		"number":           (*hexutil.Big)(head.Number),// 可能会有cannot unmarshal "\"0x24\"" into a *big.Int问题
 		"hash":             b.Hash(),
 		"parentHash":       head.ParentHash,
 		"logsBloom":        head.Bloom,
