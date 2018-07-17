@@ -159,7 +159,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 
 	// test if the server is ordered to stop
 	for atomic.LoadInt32(&s.run) == 1 {
-		reqs, batch, err := s.readRequest(codec)
+		reqs, batch, err := s.readRequest(codec) //读取请求
 		if err != nil {
 			// If a parsing error occurred, send an error
 			if err.Error() != "EOF" {
@@ -203,7 +203,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 			if batch {
 				s.execBatch(ctx, codec, reqs)
 			} else {
-				s.exec(ctx, codec, reqs[0])
+				s.exec(ctx, codec, reqs[0]) // 执行请求
 			}
 		}(reqs, batch)
 	}
@@ -213,6 +213,7 @@ func (s *Server) serveRequest(codec ServerCodec, singleShot bool, options CodecO
 // ServeCodec reads incoming requests from codec, calls the appropriate callback and writes the
 // response back using the given codec. It will block until the codec is closed or the server is
 // stopped. In either case the codec is closed.
+// ServeCodec 读取从codec发送过来的请求，调用合适的回调，将返回值写入codec
 func (s *Server) ServeCodec(codec ServerCodec, options CodecOption) {
 	defer codec.Close()
 	s.serveRequest(codec, false, options)

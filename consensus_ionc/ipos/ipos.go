@@ -214,6 +214,7 @@ func (c *IPos) Authorize(signer common.Address, signFn SignerFn) {
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 // 尝试补全区块（nonce，签名）
+// 判断是否有出块权
 func (c *IPos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
