@@ -21,7 +21,8 @@ var (
 )
 
 const (
-	INITIAL_BASE_TARGET int64 = 153722867
+	//INITIAL_BASE_TARGET int64 = 153722867
+	INITIAL_BASE_TARGET int64 = 180143985
 	MAX_BALANCE_NXT     int64 = 800000000 // IONC 8亿
 	MAX_BASE_TARGET     int64 = MAX_BALANCE_NXT * INITIAL_BASE_TARGET
 )
@@ -133,8 +134,8 @@ func (c *IPos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	}
 	//计算baseTarget
 	parentBaseTarget := parent.BaseTarget
-	diff := header.Time.Sub(header.Time, parent.Time)
-	newBaseTarget := parentBaseTarget.Mul(parentBaseTarget, diff)
+	diff := new(big.Int).Set(header.Time).Sub(header.Time, parent.Time)
+	newBaseTarget := new(big.Int).Set(parentBaseTarget).Mul(parentBaseTarget, diff)
 	newBaseTarget = newBaseTarget.Div(newBaseTarget, big.NewInt(60))
 
 	// 最大余额8亿，MAX_BASE_TARGET =  8亿 * 初始baseTarget   2 ** 57
@@ -166,7 +167,7 @@ func (c *IPos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 
 	// 更新难度
 	//cumulativeDifficulty
-	t, _ := new(big.Int).SetString("18446744073709551616", 10)
+	t, _ := new(big.Int).SetString("18446744073709551615", 10) // 2 ^ 64
 	currentDiff := new(big.Int).Div(t, header.BaseTarget)
 	//currentDiff = new(big.Int).Add(currentDiff, parent.Difficulty) // 不做累计难度
 	header.Difficulty = currentDiff
@@ -211,6 +212,56 @@ func (c *IPos) Authorize(signer common.Address, signFn SignerFn) {
 	c.signFn = signFn
 }
 
+func (c *IPos) getHit(chain consensus.ChainReader, block *types.Block) *big.Int {
+	header := block.Header()
+	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+
+	hw := sha3.NewKeccak256()
+	hw.Write(parentHeader.GenerationSignature)
+	hw.Write(header.Coinbase[:])
+	hit := hw.Sum(nil)[0:8]
+
+	return new(big.Int).SetBytes(hit)
+}
+
+func (c *IPos) getHitTime(chain consensus.ChainReader, block *types.Block) *big.Int {
+	header := block.Header()
+	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+
+	effectiveBalance := c.effectiveBalance(chain, block)
+	hit := c.getHit(chain, block)
+
+	effective := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
+	effective = new(big.Int).Set(hit).Div(hit, effective)
+	hitTime := new(big.Int).Set(parentHeader.Time).Add(parentHeader.Time, effective)
+	return hitTime
+}
+
+func (c *IPos) verifyHit(chain consensus.ChainReader, block *types.Block) bool {
+	header := block.Header()
+	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+
+	effectiveBalance := c.effectiveBalance(chain, block)
+
+	hit := c.getHit(chain, block)
+
+	// 需要重新计算
+	effectiveBaseTarget := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
+
+	elapsedTime := new(big.Int).Set(header.Time).Sub(header.Time, parentHeader.Time)
+
+	prevTarget := new(big.Int).Set(effectiveBaseTarget).Mul(effectiveBaseTarget, elapsedTime)
+	target := new(big.Int).Set(prevTarget).Add(prevTarget, effectiveBaseTarget)
+
+	timeOut := new(big.Int).SetInt64(3600) // 1h
+
+	return hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0)
+}
+
+func (c *IPos) effectiveBalance(chain consensus.ChainReader, block *types.Block) *big.Int {
+	return big.NewInt(MAX_BALANCE_NXT / 4)
+}
+
 // Seal implements consensus.Engine, attempting to create a sealed block using
 // the local signing credentials.
 // 尝试补全区块（nonce，签名）
@@ -218,6 +269,12 @@ func (c *IPos) Authorize(signer common.Address, signFn SignerFn) {
 func (c *IPos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
+
+	// 判断出块权
+	if ok := c.verifyHit(chain, block); !ok {
+		return nil, nil
+	}
+	// 判断出块权
 
 	number := header.Number.Uint64()
 	if number == 0 {

@@ -275,11 +275,12 @@ func (self *worker) update() {
 				// 执行交易
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.currentMu.Unlock()
-			} else {
+			} else { //开启挖矿
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 { // 如果是POA算法
-					self.commitNewWork()
-				}
+				//if self.config.Clique != nil && self.config.Clique.Period == 0 { // 如果是POA算法
+				//IPOS 算法，如果有新的交易时开始挖矿
+				self.commitNewWork()
+				//}
 			}
 
 		// System stopped
