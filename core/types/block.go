@@ -69,19 +69,19 @@ func (n *BlockNonce) UnmarshalText(input []byte) error {
 // Header represents a block header in the Ethereum blockchain.
 // 生成挖矿的数据 通过这些数据寻找nonce
 type Header struct {
-	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"`
-	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"`
-	Coinbase    common.Address `json:"miner"            gencodec:"required"`
-	Root        common.Hash    `json:"stateRoot"        gencodec:"required"`
-	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"`
-	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"`
-	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"`
-	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"`
-	Number      *big.Int       `json:"number"           gencodec:"required"`
-	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"`
-	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"`
-	Time        *big.Int       `json:"timestamp"        gencodec:"required"`
-	Extra       []byte         `json:"extraData"        gencodec:"required"`
+	ParentHash  common.Hash    `json:"parentHash"       gencodec:"required"` //指向父区块(parentBlock)的指
+	UncleHash   common.Hash    `json:"sha3Uncles"       gencodec:"required"` //Block结构体的成员uncles的RLP哈希值
+	Coinbase    common.Address `json:"miner"            gencodec:"required"` //挖掘出这个区块的作者地址
+	Root        common.Hash    `json:"stateRoot"        gencodec:"required"` //StateDB中的“state Trie”的根节点的RLP哈希值
+	TxHash      common.Hash    `json:"transactionsRoot" gencodec:"required"` //Block中 “tx Trie”的根节点的RLP哈希值
+	ReceiptHash common.Hash    `json:"receiptsRoot"     gencodec:"required"` //Block中的 "Receipt Trie”的根节点的RLP哈希值
+	Bloom       Bloom          `json:"logsBloom"        gencodec:"required"` //Bloom过滤器(Filter)，用来快速判断一个参数Log对象是否存在于一组已知的Log集合中
+	Difficulty  *big.Int       `json:"difficulty"       gencodec:"required"` //区块的难度。
+	Number      *big.Int       `json:"number"           gencodec:"required"` //区块的序号
+	GasLimit    *big.Int       `json:"gasLimit"         gencodec:"required"` //区块内所有Gas消耗的理论上限
+	GasUsed     *big.Int       `json:"gasUsed"          gencodec:"required"` //区块内所有Transaction执行时所实际消耗的Gas总和。
+	Time        *big.Int       `json:"timestamp"        gencodec:"required"` //区块“应该”被创建的时间。由共识算法确定，一般来说，要么等于parentBlock.Time + 10s，要么等于当前系统时间。
+	Extra       []byte         `json:"extraData"        gencodec:"required"` //区块的扩展值
 	MixDigest   common.Hash    `json:"mixHash"          gencodec:"required"`
 	Nonce       BlockNonce     `json:"nonce"            gencodec:"required"`
 }
