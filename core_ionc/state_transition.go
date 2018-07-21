@@ -236,7 +236,7 @@ func (st *StateTransition) TransitionDb() (ret []byte, requiredGas, usedGas *big
 		// error.
 		vmerr error
 	)
-	if contractCreation {
+	if contractCreation { // 创建合约
 		ret, _, st.gas, vmerr = evm.Create(sender, st.data, st.gas, st.value)
 	} else {
 		// Increment the nonce for the next transaction
