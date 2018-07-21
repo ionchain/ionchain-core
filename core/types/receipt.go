@@ -47,7 +47,7 @@ type Receipt struct {
 	// Consensus fields
 	PostState         []byte   `json:"root"`
 	Status            uint     `json:"status"`
-	CumulativeGasUsed *big.Int `json:"cumulativeGasUsed" gencodec:"required"`
+	CumulativeGasUsed *big.Int `json:"cumulativeGasUsed" gencodec:"required"`//执行完此交易时候，块内消耗的总的gas值
 	Bloom             Bloom    `json:"logsBloom"         gencodec:"required"`
 	Logs              []*Log   `json:"logs"              gencodec:"required"`
 
