@@ -71,17 +71,19 @@ func sigHash(header *types.Header) (hash common.Hash) {
 }
 
 type IPos struct {
-	db ethdb.Database
+	db          ethdb.Database
+	IpcEndpoint string
 
 	signer common.Address // Ethereum address of the signing key 签名的地址
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 }
 
-func New(db ethdb.Database) *IPos {
+func New(db ethdb.Database, IpcEndpoint string) *IPos {
 
 	return &IPos{
-		db: db,
+		db:          db,
+		IpcEndpoint: IpcEndpoint,
 	}
 }
 
@@ -259,7 +261,9 @@ func (c *IPos) verifyHit(chain consensus.ChainReader, block *types.Block) bool {
 }
 
 func (c *IPos) effectiveBalance(chain consensus.ChainReader, block *types.Block) *big.Int {
-	return big.NewInt(MAX_BALANCE_NXT / 4)
+
+	balance, _ := mintPower(block.Coinbase(), c.IpcEndpoint)
+	return balance
 }
 
 // Seal implements consensus.Engine, attempting to create a sealed block using

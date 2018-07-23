@@ -1146,7 +1146,7 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 	}
 	var engine consensus.Engine
 
-	engine=ipos.New(chainDb)
+	engine = ipos.New(chainDb, stack.IPCEndpoint())
 
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
 	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)

@@ -148,7 +148,6 @@ func New(ctx *node.ServiceContext, config *Config) (*IONCMini, error) {
 	return eth, nil
 }
 
-
 func makeExtraData(extra []byte) []byte {
 	if len(extra) == 0 {
 		// create default extradata 创建默认extradata
@@ -166,7 +165,6 @@ func makeExtraData(extra []byte) []byte {
 	return extra
 }
 
-
 // CreateDB creates the chain database.
 func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Database, error) {
 	db, err := ctx.OpenDatabase(name, config.DatabaseCache, config.DatabaseHandles)
@@ -182,7 +180,7 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ethdb.Data
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
 
-	return ipos.New(db)
+	return ipos.New(db, ctx.IpcEndpoint)
 
 }
 
@@ -241,7 +239,6 @@ func (s *IONCMini) APIs() []rpc.API {
 		},
 	}...)
 }
-
 
 func (s *IONCMini) Etherbase() (eb common.Address, err error) {
 	s.lock.RLock()
@@ -306,7 +303,6 @@ func (s *IONCMini) StartMining(local bool) error {
 	go s.miner.Start(eb)
 	return nil
 }
-
 
 func (s *IONCMini) StopMining()         { s.miner.Stop() }
 func (s *IONCMini) IsMining() bool      { return s.miner.Mining() }
