@@ -58,6 +58,7 @@ type TransactOpts struct {
 // BoundContract is the base wrapper object that reflects a contract on the
 // Ethereum network. It contains a collection of methods that are used by the
 // higher level contract bindings to operate.
+// BoundContract 表示 部署在以太坊网络上的合约的抽象，包含一些被上层应用使用的方法
 type BoundContract struct {
 	address    common.Address     // Deployment address of the contract on the Ethereum blockchain
 	abi        abi.ABI            // Reflect based ABI to access the correct Ethereum methods
@@ -86,10 +87,12 @@ func DeployContract(opts *TransactOpts, abi abi.ABI, bytecode []byte, backend Co
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	// 签名后的交易
 	tx, err := c.transact(opts, nil, append(bytecode, input...))
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
+	// 创建合约地址
 	c.address = crypto.CreateAddress(opts.From, tx.Nonce())
 	return c.address, tx, c, nil
 }
