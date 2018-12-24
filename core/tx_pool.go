@@ -420,15 +420,20 @@ func (pool *TxPool) reset(oldHead, newHead *types.Header) {
 	// any transactions that have been included in the block or
 	// have been invalidated because of another transaction (e.g.
 	// higher gas price)
+	// 校验pending交易，移除已经被包含在区块中的交易，或者是因为其他交易导致不可用的交易(比如有一个更高的gasPrice)
+	// demote 降级 将pending中的一些交易降级到queue里面。
 	pool.demoteUnexecutables()
 
 	// Update all accounts to the latest known pending nonce
+	// 把所有的账户的nonce更新成最新的pending nonce（pending queue中最小的nonce）
 	for addr, list := range pool.pending {
 		txs := list.Flatten() // Heavy but will be cached and is needed by the miner anyway
 		pool.pendingState.SetNonce(addr, txs[len(txs)-1].Nonce()+1)
 	}
 	// Check the queue and move transactions over to the pending if possible
 	// or remove those that have become invalid
+	// 检查队列，如果可用把交易移到pending，或移除变得非法的交易
+	// promote 升级
 	pool.promoteExecutables(nil)
 }
 
@@ -947,6 +952,7 @@ func (pool *TxPool) removeTx(hash common.Hash) {
 // promoteExecutables moves transactions that have become processable from the
 // future queue to the set of pending transactions. During this process, all
 // invalidated transactions (low nonce, low balance) are deleted.
+// 将future queue中变得可执行的交易移到pending 队列中。在移动过程中，所有非法的交易（低nonce，地余额）会被删除
 func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	// Gather all the accounts potentially needing updates
 	if accounts == nil {
@@ -962,6 +968,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			continue // Just in case someone calls with a non existing account
 		}
 		// Drop all transactions that are deemed too old (low nonce)
+		// 删除旧的交易（nonce 低于当前区块中的账户的nonce）
 		for _, tx := range list.Forward(pool.currentState.GetNonce(addr)) {
 			hash := tx.Hash()
 			log.Trace("Removed old queued transaction", "hash", hash)
@@ -969,6 +976,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas)
+		// 删除所有成本过高的交易（余额不足，gas超出当前区块可用gasLimit）
 		drops, _ := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
@@ -978,12 +986,14 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			queuedNofundsCounter.Inc(1)
 		}
 		// Gather all executable transactions and promote them
+		// 收集 所有可执行的交易，将他们放入pending 队列中
 		for _, tx := range list.Ready(pool.pendingState.GetNonce(addr)) {
 			hash := tx.Hash()
 			log.Trace("Promoting queued transaction", "hash", hash)
 			pool.promoteTx(addr, hash, tx)
 		}
 		// Drop all transactions over the allowed limit
+		// 删除超过最大限制数量的交易
 		if !pool.locals.contains(addr) {
 			for _, tx := range list.Cap(int(pool.config.AccountQueue)) {
 				hash := tx.Hash()
@@ -1003,30 +1013,43 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 	for _, list := range pool.pending {
 		pending += uint64(list.Len())
 	}
-	if pending > pool.config.GlobalSlots {
+	if pending > pool.config.GlobalSlots { // pending超过限制数量
 		pendingBeforeCap := pending
 		// Assemble a spam order to penalize large transactors first
+		// 假设有恶意 发起大量交易
 		spammers := prque.New()
 		for addr, list := range pool.pending {
 			// Only evict transactions from high rollers
+			// 首先把所有大于AccountSlots最小值的账户记录下来， 会从这些账户里面剔除一些交易。
+			// 注意spammers是一个优先级队列，也就是说是按照交易的多少从大到小排序的。
 			if !pool.locals.contains(addr) && uint64(list.Len()) > pool.config.AccountSlots {
 				spammers.Push(addr, float32(list.Len()))
 			}
 		}
 		// Gradually drop transactions from offenders
-		offenders := []common.Address{}
-		for pending > pool.config.GlobalSlots && !spammers.Empty() {
+		// 逐渐删除来自冒犯者的交易
+		offenders := []common.Address{} // 冒犯者列表
+		for pending > pool.config.GlobalSlots && !spammers.Empty() {//pending列表超出系统最大
+			/*
+			模拟一下offenders队列的账户交易数量的变化情况。
+				第一次循环   [10]    循环结束  [10]
+				第二次循环   [10, 9] 循环结束  [9,9]
+				第三次循环   [9, 9, 7] 循环结束 [7, 7, 7]
+				第四次循环   [7, 7 , 7 ,2] 循环结束 [2, 2 ,2, 2]
+			*/
 			// Retrieve the next offender if not local address
 			offender, _ := spammers.Pop()
-			offenders = append(offenders, offender.(common.Address))
+			offenders = append(offenders, offender.(common.Address)) // 放入一个最大的
 
 			// Equalize balances until all the same or below threshold
-			if len(offenders) > 1 {
+			if len(offenders) > 1 {// 第一次进入这个循环的时候， offenders队列里面有交易数量最大的两个账户
 				// Calculate the equalization threshold for all current offenders
-				threshold := pool.pending[offender.(common.Address)].Len()
+				threshold := pool.pending[offender.(common.Address)].Len()  // 地址 含有最多的交易数量
 
 				// Iteratively reduce all offenders until below limit or threshold reached
+				// 遍历直到pending有效，或者是倒数第二个的交易数量等于最后一个的交易数量
 				for pending > pool.config.GlobalSlots && pool.pending[offenders[len(offenders)-2]].Len() > threshold {
+					// 遍历除了最后一个账户以外的所有账户， 把他们的交易数量减去1
 					for i := 0; i < len(offenders)-1; i++ {
 						list := pool.pending[offenders[i]]
 						for _, tx := range list.Cap(list.Len() - 1) {
@@ -1047,6 +1070,8 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 			}
 		}
 		// If still above threshold, reduce to limit or min allowance
+		// 经过上面的循环，所有的超过AccountSlots的账户的交易数量都变成了之前的最小值。
+		// 如果还是超过阈值，那么在继续从offenders里面每次删除一个。
 		if pending > pool.config.GlobalSlots && len(offenders) > 0 {
 			for pending > pool.config.GlobalSlots && uint64(pool.pending[offenders[len(offenders)-1]].Len()) > pool.config.AccountSlots {
 				for _, addr := range offenders {
@@ -1070,6 +1095,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		pendingRateLimitCounter.Inc(int64(pendingBeforeCap - pending))
 	}
 	// If we've queued more transactions than the hard limit, drop oldest ones
+	// 我们处理了pending的限制， 下面需要处理future queue的限制了。
 	queued := uint64(0)
 	for _, list := range pool.queue {
 		queued += uint64(list.Len())
@@ -1085,6 +1111,7 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 		sort.Sort(addresses)
 
 		// Drop transactions until the total is below the limit or only locals remain
+		// 从后往前，也就是心跳越新的就越会被删除。
 		for drop := queued - pool.config.GlobalQueue; drop > 0 && len(addresses) > 0; {
 			addr := addresses[len(addresses)-1]
 			list := pool.queue[addr.address]
@@ -1114,12 +1141,16 @@ func (pool *TxPool) promoteExecutables(accounts []common.Address) {
 // demoteUnexecutables removes invalid and processed transactions from the pools
 // executable/pending queue and any subsequent transactions that become unexecutable
 // are moved back into the future queue.
+// 从交易池中移除无效的和已经处理完成的交易，penging中变得不可执行的交易放入 future queue中
 func (pool *TxPool) demoteUnexecutables() {
 	// Iterate over all accounts and demote any non-executable transactions
+	// 遍历所有的账户，降级不可执行交易
 	for addr, list := range pool.pending {
-		nonce := pool.currentState.GetNonce(addr)
+		nonce := pool.currentState.GetNonce(addr) // Account的nonce
 
 		// Drop all transactions that are deemed too old (low nonce)
+		// 放弃所有被认为是旧的交易（nonce 太低）
+		// 删除所有小于当前地址的nonce的交易，并从pool.all删除
 		for _, tx := range list.Forward(nonce) {
 			hash := tx.Hash()
 			log.Trace("Removed old pending transaction", "hash", hash)
@@ -1127,6 +1158,8 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.priced.Removed()
 		}
 		// Drop all transactions that are too costly (low balance or out of gas), and queue any invalids back for later
+		// 删除所有的太昂贵的交易。 用户的balance可能不够用。或者是out of gas
+		// 在removed的交易中，将nonce比较高的放入invalid列表中，并放入queue队列中
 		drops, invalids := list.Filter(pool.currentState.GetBalance(addr), pool.currentMaxGas)
 		for _, tx := range drops {
 			hash := tx.Hash()
@@ -1141,6 +1174,8 @@ func (pool *TxPool) demoteUnexecutables() {
 			pool.enqueueTx(hash, tx)
 		}
 		// If there's a gap in front, warn (should never happen) and postpone all transactions
+		// 如果存在一个空洞(nonce空洞)， 那么需要把所有的交易都放入future queue。
+		// 这一步确实应该不可能发生，因为Filter已经把 invalids的都处理了。 应该不存在invalids的交易，也就是不存在空洞的。
 		if list.Len() > 0 && list.txs.Get(nonce) == nil {
 			for _, tx := range list.Cap(0) {
 				hash := tx.Hash()
