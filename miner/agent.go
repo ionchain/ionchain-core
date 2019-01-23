@@ -25,7 +25,7 @@ import (
 	"github.com/ionchain/ionchain-core/log"
 )
 
-type CpuAgent struct {
+type ForgeAgent struct {
 	mu sync.Mutex
 
 	workCh        chan *Work
@@ -33,32 +33,36 @@ type CpuAgent struct {
 	quitCurrentOp chan struct{}
 	returnCh      chan<- *Result
 
+	forgeCh chan struct{}
+
 	chain  consensus.ChainReader
 	engine consensus.Engine
 
 	isMining int32 // isMining indicates whether the agent is currently mining
 }
 
-func NewCpuAgent(chain consensus.ChainReader, engine consensus.Engine) *CpuAgent {
-	miner := &CpuAgent{
-		chain:  chain,
-		engine: engine,
-		stop:   make(chan struct{}, 1),
-		workCh: make(chan *Work, 1),
+func NewForgeAgent(chain consensus.ChainReader, engine consensus.Engine) *ForgeAgent {
+	miner := &ForgeAgent{
+		chain:   chain,
+		engine:  engine,
+		stop:    make(chan struct{}, 1),
+		workCh:  make(chan *Work, 1),
+		forgeCh: make(chan struct{}, 1),
 	}
 	return miner
 }
 
-func (self *CpuAgent) Work() chan<- *Work            { return self.workCh } //通过嗲用Work() 方法和微机可以和 workCh获取联系
-func (self *CpuAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
+func (self *ForgeAgent) Work() chan<- *Work            { return self.workCh } //通过调用Work() 方法和微机可以和 workCh获取联系
+func (self *ForgeAgent) ForgeCh() chan struct{}      { return self.forgeCh }
+func (self *ForgeAgent) SetReturnCh(ch chan<- *Result) { self.returnCh = ch }
 
-func (self *CpuAgent) Stop() {
+func (self *ForgeAgent) Stop() {
 	if !atomic.CompareAndSwapInt32(&self.isMining, 1, 0) {
 		return // agent already stopped
 	}
 	self.stop <- struct{}{}
 done:
-	// Empty work channel
+// Empty work channel
 	for {
 		select {
 		case <-self.workCh:
@@ -69,7 +73,7 @@ done:
 }
 
 //采用本地cpu进行挖矿
-func (self *CpuAgent) Start() {
+func (self *ForgeAgent) Start() {
 	if !atomic.CompareAndSwapInt32(&self.isMining, 0, 1) {
 		return // agent already started
 	}
@@ -77,7 +81,7 @@ func (self *CpuAgent) Start() {
 }
 
 //开始挖矿
-func (self *CpuAgent) update() {
+func (self *ForgeAgent) update() {
 out:
 	for {
 		select {
@@ -105,7 +109,7 @@ out:
 }
 
 // 开始挖矿
-func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
+func (self *ForgeAgent) mine(work *Work, stop <-chan struct{}) {
 
 	// 填充区块头：ethash共识寻找nonce，poa共识 签名区块头
 	if result, err := self.engine.Seal(self.chain, work.Block, stop); result != nil {
@@ -113,15 +117,9 @@ func (self *CpuAgent) mine(work *Work, stop <-chan struct{}) {
 		self.returnCh <- &Result{work, result}
 	} else {
 		if err != nil {
+			self.forgeCh <- struct{}{}
 			log.Warn("Block sealing failed", "err", err)
 		}
 		self.returnCh <- nil
 	}
-}
-
-func (self *CpuAgent) GetHashRate() int64 {
-	if pow, ok := self.engine.(consensus.PoW); ok {
-		return int64(pow.Hashrate())
-	}
-	return 0
 }

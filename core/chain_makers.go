@@ -21,8 +21,6 @@ import (
 	"math/big"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/consensus/ethash"
-	"github.com/ionchain/ionchain-core/consensus/misc"
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/core/vm"
@@ -141,7 +139,8 @@ func (b *BlockGen) OffsetTime(seconds int64) {
 	if b.header.Time.Cmp(b.parent.Header().Time) <= 0 {
 		panic("block time out of range")
 	}
-	b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
+	//b.header.Difficulty = ethash.CalcDifficulty(b.config, b.header.Time.Uint64(), b.parent.Header())
+	b.header.Difficulty = big.NewInt(0)
 }
 
 // GenerateChain creates a chain of n blocks. The first block's
@@ -172,14 +171,14 @@ func GenerateChain(config *params.ChainConfig, parent *types.Block, db ethdb.Dat
 				}
 			}
 		}
-		if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
-			misc.ApplyDAOHardFork(statedb)
-		}
+		//if config.DAOForkSupport && config.DAOForkBlock != nil && config.DAOForkBlock.Cmp(h.Number) == 0 {
+		//	misc.ApplyDAOHardFork(statedb)
+		//}
 		// Execute any user modifications to the block and finalize it
 		if gen != nil {
 			gen(i, b)
 		}
-		ethash.AccumulateRewards(config, statedb, h, b.uncles)
+		//ethash.AccumulateRewards(config, statedb, h, b.uncles)
 		root, err := statedb.CommitTo(db, config.IsEIP158(h.Number))
 		if err != nil {
 			panic(fmt.Sprintf("state write error: %v", err))
@@ -213,12 +212,13 @@ func makeHeader(config *params.ChainConfig, parent *types.Block, state *state.St
 		Root:       state.IntermediateRoot(config.IsEIP158(parent.Number())),
 		ParentHash: parent.Hash(),
 		Coinbase:   parent.Coinbase(),
-		Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
-			Number:     parent.Number(),
-			Time:       new(big.Int).Sub(time, big.NewInt(10)),
-			Difficulty: parent.Difficulty(),
-			UncleHash:  parent.UncleHash(),
-		}),
+		//Difficulty: ethash.CalcDifficulty(config, time.Uint64(), &types.Header{
+		//	Number:     parent.Number(),
+		//	Time:       new(big.Int).Sub(time, big.NewInt(10)),
+		//	Difficulty: parent.Difficulty(),
+		//	UncleHash:  parent.UncleHash(),
+		//}),
+		Difficulty: big.NewInt(0),
 		GasLimit: CalcGasLimit(parent),
 		GasUsed:  new(big.Int),
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
@@ -235,7 +235,7 @@ func newCanonical(n int, full bool) (ethdb.Database, *BlockChain, error) {
 	db, _ := ethdb.NewMemDatabase()
 	genesis := gspec.MustCommit(db)
 
-	blockchain, _ := NewBlockChain(db, params.AllEthashProtocolChanges, ethash.NewFaker(), vm.Config{})
+	blockchain, _ := NewBlockChain(db, params.AllEthashProtocolChanges, /*ethash.NewFaker()*/nil, vm.Config{})
 	// Create and inject the requested chain
 	if n == 0 {
 		return db, blockchain, nil

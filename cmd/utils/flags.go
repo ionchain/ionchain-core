@@ -32,8 +32,6 @@ import (
 	"github.com/ionchain/ionchain-core/accounts/keystore"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/consensus/clique"
-	"github.com/ionchain/ionchain-core/consensus/ethash"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/vm"
@@ -56,6 +54,7 @@ import (
 	"github.com/ionchain/ionchain-core/params"
 	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 	"gopkg.in/urfave/cli.v1"
+	"github.com/ionchain/ionchain-core/consensus/ipos"
 )
 
 var (
@@ -572,7 +571,8 @@ func setNodeUserIdent(ctx *cli.Context, cfg *node.Config) {
 // setBootstrapNodes creates a list of bootstrap nodes from the command line
 // flags, reverting to pre-configured ones if none have been specified.
 func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
-	urls := params.MainnetBootnodes
+	//urls := params.MainnetBootnodes
+	urls := params.IONCMainnetBootnodes
 	switch {
 	case ctx.GlobalIsSet(BootnodesFlag.Name) || ctx.GlobalIsSet(BootnodesV4Flag.Name):
 		if ctx.GlobalIsSet(BootnodesV4Flag.Name) {
@@ -1096,7 +1096,7 @@ func RegisterShhService(stack *node.Node, cfg *whisper.Config) {
 func RegisterEthStatsService(stack *node.Node, url string) {
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		// Retrieve both eth and les services
-		var ethServ *eth.Ethereum
+		var ethServ *eth.IONChain
 		ctx.Service(&ethServ)
 
 		var lesServ *les.LightEthereum
@@ -1154,17 +1154,8 @@ func MakeChain(ctx *cli.Context, stack *node.Node) (chain *core.BlockChain, chai
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Clique != nil {
-		engine = clique.New(config.Clique, chainDb)
-	} else {
-		engine = ethash.NewFaker()
-		if !ctx.GlobalBool(FakePoWFlag.Name) {
-			engine = ethash.New(
-				stack.ResolvePath(eth.DefaultConfig.EthashCacheDir), eth.DefaultConfig.EthashCachesInMem, eth.DefaultConfig.EthashCachesOnDisk,
-				stack.ResolvePath(eth.DefaultConfig.EthashDatasetDir), eth.DefaultConfig.EthashDatasetsInMem, eth.DefaultConfig.EthashDatasetsOnDisk,
-			)
-		}
-	}
+	engine = ipos.New(chainDb, stack.IPCEndpoint())
+
 	vmcfg := vm.Config{EnablePreimageRecording: ctx.GlobalBool(VMEnableDebugFlag.Name)}
 	chain, err = core.NewBlockChain(chainDb, config, engine, vmcfg)
 	if err != nil {

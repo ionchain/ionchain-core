@@ -21,10 +21,9 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	"github.com/ionchain/ionchain-core/accounts"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/core"
+	core "github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/eth/downloader"
@@ -32,9 +31,11 @@ import (
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
+	"github.com/ionchain/ionchain-core/accounts"
 )
 
 // Backend wraps all methods required for mining.
+// 做一个FakeBackend
 type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
@@ -65,8 +66,8 @@ func New(eth Backend, config *params.ChainConfig, mux *event.TypeMux, engine con
 		worker:   newWorker(config, engine, common.Address{}, eth, mux), //新建worker
 		canStart: 1,
 	}
-	miner.Register(NewCpuAgent(eth.BlockChain(), engine)) // 向worker中注册agent
-	go miner.update()
+	miner.Register(NewForgeAgent(eth.BlockChain(), engine)) // 向worker中注册agent
+	go miner.update() // 暂停监听网络事件
 
 	return miner
 }
@@ -91,6 +92,7 @@ out:
 				log.Info("Mining aborted due to sync")
 			}
 		case downloader.DoneEvent, downloader.FailedEvent:
+			log.Info("Mining start due to sync")
 			shouldStart := atomic.LoadInt32(&self.shouldStart) == 1
 
 			atomic.StoreInt32(&self.canStart, 1)
@@ -150,20 +152,6 @@ func (self *Miner) Mining() bool {
 	return atomic.LoadInt32(&self.mining) > 0
 }
 
-func (self *Miner) HashRate() (tot int64) {
-	if pow, ok := self.engine.(consensus.PoW); ok {
-		tot += int64(pow.Hashrate())
-	}
-	// do we care this might race? is it worth we're rewriting some
-	// aspects of the worker/locking up agents so we can get an accurate
-	// hashrate?
-	for agent := range self.worker.agents {
-		if _, ok := agent.(*CpuAgent); !ok {
-			tot += agent.GetHashRate()
-		}
-	}
-	return
-}
 
 func (self *Miner) SetExtra(extra []byte) error {
 	if uint64(len(extra)) > params.MaximumExtraDataSize {

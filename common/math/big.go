@@ -29,6 +29,8 @@ var (
 	MaxBig256 = new(big.Int).Set(tt256m1)
 	tt63      = BigPow(2, 63)
 	MaxBig63  = new(big.Int).Sub(tt63, big.NewInt(1))
+	tt64      = BigPow(2, 64)
+	MaxBig64  = new(big.Int).Sub(tt64, big.NewInt(1))
 )
 
 const (

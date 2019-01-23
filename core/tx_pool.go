@@ -692,6 +692,7 @@ func (pool *TxPool) add(tx *types.Transaction, local bool) (bool, error) {
 
 		// We've directly injected a replacement transaction, notify subsystems
 		// 把交易加入到队列,并发送消息告诉所有的订阅者, 这个订阅者在eth协议内部. 会接收这个消息并把这个消息通过网路广播出去()
+		log.Info("pool send txFeed","tx",tx)
 		go pool.txFeed.Send(TxPreEvent{tx})
 
 		return old != nil, nil

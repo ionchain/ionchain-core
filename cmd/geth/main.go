@@ -165,11 +165,11 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See misccmd.go:
-		makecacheCommand,
-		makedagCommand,
-		versionCommand,
+		//makecacheCommand,
+		//makedagCommand,
+		//versionCommand,
 		bugCommand,
-		licenseCommand,
+		//licenseCommand,
 		// See config.go
 		dumpConfigCommand,
 	}
@@ -285,8 +285,8 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 	// Start auxiliary services if enabled
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		// Mining only makes sense if a full Ethereum node is running
-		var ethereum *eth.Ethereum
-		if err := stack.Service(&ethereum); err != nil {
+		var ionchain *eth.IONChain
+		if err := stack.Service(&ionchain); err != nil {
 			utils.Fatalf("ethereum service not running: %v", err)
 		}
 		// Use a reduced number of threads if requested
@@ -294,14 +294,14 @@ func startNode(ctx *cli.Context, stack *node.Node) {
 			type threaded interface {
 				SetThreads(threads int)
 			}
-			if th, ok := ethereum.Engine().(threaded); ok {
+			if th, ok := ionchain.Engine().(threaded); ok {
 				th.SetThreads(threads)
 			}
 		}
 		// Set the gas price to the limits from the CLI and start mining
-		ethereum.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
+		ionchain.TxPool().SetGasPrice(utils.GlobalBig(ctx, utils.GasPriceFlag.Name))
 		// 启动挖矿
-		if err := ethereum.StartMining(true); err != nil {
+		if err := ionchain.StartMining(true); err != nil {
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

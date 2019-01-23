@@ -28,7 +28,7 @@ import (
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/consensus/misc"
+	//"github.com/ionchain/ionchain-core/consensus/misc"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/eth/downloader"
@@ -452,10 +452,10 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 				p.forkDrop = nil
 
 				// Validate the header and either drop the peer or continue
-				if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
-					p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
-					return err
-				}
+				//if err := misc.VerifyDAOHeaderExtraData(pm.chainconfig, headers[0]); err != nil {
+				//	p.Log().Debug("Verified to be on the other side of the DAO fork, dropping")
+				//	return err
+				//}
 				p.Log().Debug("Verified to be on the same side of the DAO fork")
 				return nil
 			}
@@ -681,6 +681,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash()) // 标记节点P已经拥有了这个交易
 		}
+		fmt.Printf("recve from net %v",txs)
 		pm.txpool.AddRemotes(txs) //将其他节点批量交易发送到交易池中
 
 	default:
@@ -734,7 +735,7 @@ func (pm *ProtocolManager) BroadcastTx(hash common.Hash, tx *types.Transaction) 
 	for _, peer := range peers {
 		peer.SendTransactions(types.Transactions{tx}) //给节点发送交易
 	}
-	log.Trace("Broadcast transaction", "hash", hash, "recipients", len(peers))
+	log.Info("Broadcast transaction", "hash", hash, "recipients", len(peers))
 }
 
 // Mined broadcast loop

@@ -93,7 +93,7 @@ func (t *nonrecursiveTree) internal(rec <-chan EventInfo) {
 			t.rw.Unlock()
 			continue
 		}
-		err := nd.Add(ei.Path()).AddDir(t.recFunc(eset))
+		err := nd.Add(ei.Path()).AddDir(t.recFunc(eset), nil)
 		t.rw.Unlock()
 		if err != nil {
 			dbgprintf("internal(%p) error: %v", rec, err)
@@ -145,7 +145,8 @@ func (t *nonrecursiveTree) watchDel(nd node, c chan<- EventInfo, e Event) eventD
 }
 
 // Watch TODO(rjeczalik)
-func (t *nonrecursiveTree) Watch(path string, c chan<- EventInfo, events ...Event) error {
+func (t *nonrecursiveTree) Watch(path string, c chan<- EventInfo,
+	doNotWatch DoNotWatchFn, events ...Event) error {
 	if c == nil {
 		panic("notify: Watch using nil channel")
 	}
@@ -162,7 +163,7 @@ func (t *nonrecursiveTree) Watch(path string, c chan<- EventInfo, events ...Even
 	defer t.rw.Unlock()
 	nd := t.root.Add(path)
 	if isrec {
-		return t.watchrec(nd, c, eset|recursive)
+		return t.watchrec(nd, c, eset|recursive, doNotWatch)
 	}
 	return t.watch(nd, c, eset)
 }
@@ -188,23 +189,24 @@ func (t *nonrecursiveTree) watch(nd node, c chan<- EventInfo, e Event) (err erro
 }
 
 func (t *nonrecursiveTree) recFunc(e Event) walkFunc {
-	return func(nd node) error {
+	return func(nd node) (err error) {
 		switch diff := nd.Watch.Add(t.rec, e|omit|Create); {
 		case diff == none:
 		case diff[1] == 0:
 			// TODO(rjeczalik): cleanup this panic after implementation is stable
 			panic("eset is empty: " + nd.Name)
 		case diff[0] == 0:
-			t.w.Watch(nd.Name, diff[1])
+			err = t.w.Watch(nd.Name, diff[1])
 		default:
-			t.w.Rewatch(nd.Name, diff[0], diff[1])
+			err = t.w.Rewatch(nd.Name, diff[0], diff[1])
 		}
-		return nil
+		return
 	}
 }
 
-func (t *nonrecursiveTree) watchrec(nd node, c chan<- EventInfo, e Event) error {
-	var traverse func(walkFunc) error
+func (t *nonrecursiveTree) watchrec(nd node, c chan<- EventInfo, e Event,
+	doNotWatch DoNotWatchFn) error {
+	var traverse func(walkFunc, DoNotWatchFn) error
 	// Non-recursive tree listens on Create event for every recursive
 	// watchpoint in order to automagically set a watch for every
 	// created directory.
@@ -225,7 +227,7 @@ func (t *nonrecursiveTree) watchrec(nd node, c chan<- EventInfo, e Event) error 
 	}
 	// TODO(rjeczalik): account every path that failed to be (re)watched
 	// and retry.
-	if err := traverse(t.recFunc(e)); err != nil {
+	if err := traverse(t.recFunc(e), doNotWatch); err != nil {
 		return err
 	}
 	t.watchAdd(nd, c, e)

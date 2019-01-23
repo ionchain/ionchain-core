@@ -62,7 +62,7 @@ type ReleaseService struct {
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
 	// Retrieve the Ethereum service dependency to access the blockchain
 	var apiBackend ethapi.Backend
-	var ethereum *eth.Ethereum
+	var ethereum *eth.IONChain
 	if err := ctx.Service(&ethereum); err == nil {
 		apiBackend = ethereum.ApiBackend
 	} else {

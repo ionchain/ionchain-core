@@ -17,8 +17,8 @@
 package miner
 
 import (
-	"bytes"
-	"fmt"
+	//"bytes"
+	//"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -26,7 +26,6 @@ import (
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/consensus/misc"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
@@ -36,6 +35,7 @@ import (
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
 	"gopkg.in/fatih/set.v0"
+	"fmt"
 )
 
 const (
@@ -55,9 +55,9 @@ const (
 type Agent interface {
 	Work() chan<- *Work
 	SetReturnCh(chan<- *Result)
+	ForgeCh() chan struct{}
 	Stop()
 	Start()
-	GetHashRate() int64
 }
 
 // Work is the workers current environment and holds
@@ -66,11 +66,11 @@ type Work struct {
 	config *params.ChainConfig
 	signer types.Signer
 
-	state     *state.StateDB // apply state changes here
+	state *state.StateDB // apply state changes here
 	ancestors *set.Set       // ancestor set (used for checking uncle parent validity)
 	family    *set.Set       // family set (used for checking uncle invalidity)
 	uncles    *set.Set       // uncle set
-	tcount    int            // tx count in cycle
+	tcount int // tx count in cycle
 
 	Block *types.Block // the new block
 
@@ -95,7 +95,7 @@ type worker struct {
 
 	// update loop
 	mux          *event.TypeMux
-	txCh         chan core.TxPreEvent  //用来接受txPool里面的交易的通道
+	txCh         chan core.TxPreEvent //用来接受txPool里面的交易的通道
 	txSub        event.Subscription   //用来接受txPool里面的交易的订阅器
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
@@ -129,21 +129,21 @@ type worker struct {
 
 func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase common.Address, eth Backend, mux *event.TypeMux) *worker {
 	worker := &worker{
-		config:         config,
-		engine:         engine,
-		eth:            eth,
-		mux:            mux,
-		txCh:           make(chan core.TxPreEvent, txChanSize),
-		chainHeadCh:    make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:    make(chan core.ChainSideEvent, chainSideChanSize),
-		chainDb:        eth.ChainDb(),
-		recv:           make(chan *Result, resultQueueSize),
-		chain:          eth.BlockChain(),
-		proc:           eth.BlockChain().Validator(),
+		config:      config,
+		engine:      engine,
+		eth:         eth,
+		mux:         mux,
+		txCh:        make(chan core.TxPreEvent, txChanSize),
+		chainHeadCh: make(chan core.ChainHeadEvent, chainHeadChanSize),
+		chainSideCh: make(chan core.ChainSideEvent, chainSideChanSize),
+		chainDb:     eth.ChainDb(),
+		recv:        make(chan *Result, resultQueueSize),
+		chain:       eth.BlockChain(),
+		proc:        eth.BlockChain().Validator(),
 		possibleUncles: make(map[common.Hash]*types.Block),
-		coinbase:       coinbase,
-		agents:         make(map[Agent]struct{}),
-		unconfirmed:    newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		coinbase:    coinbase,
+		agents:      make(map[Agent]struct{}),
+		unconfirmed: newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 	}
 
 	// Subscribe TxPreEvent for tx pool
@@ -158,6 +158,8 @@ func newWorker(config *params.ChainConfig, engine consensus.Engine, coinbase com
 
 	// 将刚挖出的区块写入本地链中，并追踪刚挖出的区块，等6个以上的区块确认
 	go worker.wait()
+
+	go worker.forgeErr() //test
 
 	// 刚启动是 提交新的work（miner.start()中也会调用一次，刚启动时 会调用两次这个方法）
 	worker.commitNewWork()
@@ -262,13 +264,13 @@ func (self *worker) update() {
 			// 提交新的work给agent挖矿
 			self.commitNewWork()
 
-		// Handle ChainSideEvent
-		case ev := <-self.chainSideCh: // 分叉链
+			// Handle ChainSideEvent
+			case ev := <-self.chainSideCh: // 分叉链
 			self.uncleMu.Lock()
 			self.possibleUncles[ev.Block.Hash()] = ev.Block
 			self.uncleMu.Unlock()
 
-		// Handle TxPreEvent
+			// Handle TxPreEvent
 		case ev := <-self.txCh:
 			// Apply transaction to the pending state if we're not mining
 			if atomic.LoadInt32(&self.mining) == 0 { // 还没开始挖矿
@@ -280,20 +282,33 @@ func (self *worker) update() {
 				// 执行交易
 				self.current.commitTransactions(self.mux, txset, self.chain, self.coinbase)
 				self.currentMu.Unlock()
-			} else {
+			} else { //开启挖矿
 				// If we're mining, but nothing is being processed, wake on new transactions
-				if self.config.Clique != nil && self.config.Clique.Period == 0 { // 如果是POA算法
-					self.commitNewWork()
-				}
+				//if self.config.Clique != nil && self.config.Clique.Period == 0 { // 如果是POA算法
+				//IPOS 算法，如果有新的交易时开始挖矿
+				//self.commitNewWork()
+				//}
 			}
 
-		// System stopped
+			// System stopped
 		case <-self.txSub.Err():
 			return
 		case <-self.chainHeadSub.Err():
 			return
 		case <-self.chainSideSub.Err():
 			return
+		}
+	}
+}
+
+func (self *worker) forgeErr() {
+	for {
+		for agent := range self.agents {
+			select {
+			case <-agent.ForgeCh():
+				self.commitNewWork()
+			}
+
 		}
 	}
 }
@@ -377,24 +392,24 @@ func (self *worker) makeCurrent(parent *types.Block, header *types.Header) error
 	if err != nil {
 		return err
 	}
-	work := &Work{ // 构建work
-		config:    self.config,
-		signer:    types.NewEIP155Signer(self.config.ChainId),
-		state:     state,
+	work := &Work{// 构建work
+		config: self.config,
+		signer: types.NewEIP155Signer(self.config.ChainId),
+		state: state,
 		ancestors: set.New(),
 		family:    set.New(),
 		uncles:    set.New(),
-		header:    header,
+		header: header,
 		createdAt: time.Now(),
 	}
 
 	// when 08 is processed ancestors contain 07 (quick block)
 	for _, ancestor := range self.chain.GetBlocksFromHash(parent.Hash(), 7) {
-		for _, uncle := range ancestor.Uncles() {
-			work.family.Add(uncle.Hash())
-		}
-		work.family.Add(ancestor.Hash())
-		work.ancestors.Add(ancestor.Hash())
+	for _, uncle := range ancestor.Uncles() {
+		work.family.Add(uncle.Hash())
+	}
+	work.family.Add(ancestor.Hash())
+	work.ancestors.Add(ancestor.Hash())
 	}
 
 	// Keep track of transactions which return errors so they can be removed
@@ -417,27 +432,29 @@ func (self *worker) commitNewWork() {
 	tstamp := tstart.Unix()
 	// 父块时间大于当前时间
 	if parent.Time().Cmp(new(big.Int).SetInt64(tstamp)) >= 0 {
-		tstamp = parent.Time().Int64() + 1
+		tstamp = parent.Time().Int64() + 1 // 修正当前时间，tstamp>parent.Time
 	}
 	// this will ensure we're not going off too far in the future
 	// 现在的时间落后于父区块的时间，所以需要休眠一段时间
-	if now := time.Now().Unix(); tstamp > now+1 {
+	if now := time.Now().Unix(); tstamp > now+1 { // 如果tstamp大于当前时间，说明节点time.now远远落后于网络上的区块时间
 		wait := time.Duration(tstamp-now) * time.Second
 		log.Info("Mining too far in the future", "wait", common.PrettyDuration(wait))
-		time.Sleep(wait)
+		time.Sleep(wait) //休眠一段时间，赶上网络中的区块时间（parent.time)
 	}
 
 	num := parent.Number()
-	header := &types.Header{ // 构建区块头信息
+	header := &types.Header{// 构建区块头信息
 		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent),
-		GasUsed:    new(big.Int),
-		Extra:      self.extra,
-		Time:       big.NewInt(tstamp),
+		Number: num.Add(num, common.Big1),
+		GasLimit: core.CalcGasLimit(parent),
+		GasUsed: new(big.Int),
+		Extra: self.extra,
+		Time: big.NewInt(tstamp),
+
+		BaseTarget: new(big.Int),
 	}
 	// Only set the coinbase if we are mining (avoid spurious block rewards)
-	if atomic.LoadInt32(&self.mining) == 1 {
+	if atomic.LoadInt32(&self.mining) == 1 { // 判断是否处于挖矿的状态
 		header.Coinbase = self.coinbase // 设置coinbase
 	}
 	if err := self.engine.Prepare(self.chain, header); err != nil { // 更新当前区块的难度
@@ -445,7 +462,7 @@ func (self *worker) commitNewWork() {
 		return
 	}
 	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
+	/*if daoBlock := self.config.DAOForkBlock; daoBlock != nil {
 		// Check whether the block is among the fork extra-override range
 		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
 		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
@@ -456,7 +473,7 @@ func (self *worker) commitNewWork() {
 				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
 			}
 		}
-	}
+	}*/
 	// Could potentially happen if starting to mine in an odd state.
 	// 构建work
 	err := self.makeCurrent(parent, header)
@@ -466,9 +483,9 @@ func (self *worker) commitNewWork() {
 	}
 	// Create the current work task and check any fork transitions needed
 	work := self.current
-	if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
+	/*if self.config.DAOForkSupport && self.config.DAOForkBlock != nil && self.config.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(work.state)
-	}
+	}*/
 	// 从交易池中获取pending交易
 	pending, err := self.eth.TxPool().Pending()
 	if err != nil {
@@ -606,7 +623,7 @@ func (env *Work) commitTransactions(mux *event.TypeMux, txs *types.TransactionsB
 		}
 		go func(logs []*types.Log, tcount int) {
 			if len(logs) > 0 {
-				mux.Post(core.PendingLogsEvent{Logs: logs})  // 广播交易执行成功后的log
+				mux.Post(core.PendingLogsEvent{Logs: logs}) // 广播交易执行成功后的log
 			}
 			if tcount > 0 {
 				mux.Post(core.PendingStateEvent{}) // 广播最新的状态
@@ -624,7 +641,7 @@ func (env *Work) commitTransaction(tx *types.Transaction, bc *core.BlockChain, c
 		env.state.RevertToSnapshot(snap) // 发生错误时，回滚状态
 		return err, nil
 	}
-	env.txs = append(env.txs, tx) // 合法的交易
+	env.txs = append(env.txs, tx)                // 合法的交易
 	env.receipts = append(env.receipts, receipt) // 交易执行成功返回的receipt
 
 	return nil, receipt.Logs
