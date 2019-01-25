@@ -834,6 +834,7 @@ func (bc *BlockChain) WriteBlockAndState(block *types.Block, receipts []*types.R
 	// 如果block的总难度和主链上的区块总难度相同那么有小于50%的概率会成为主链
 	// 第二个表达式 ((externTd.Cmp(localTd) == 0 && mrand.Float64() < 0.5))
 	// 是为了减少自私挖矿的可能性.
+	fmt.Printf("compare localTd %d, externTd %d \n",localTd,externTd)
 	reorg := externTd.Cmp(localTd) > 0
 	if !reorg && externTd.Cmp(localTd) == 0 {
 		// Split same-difficulty blocks by number, then at random

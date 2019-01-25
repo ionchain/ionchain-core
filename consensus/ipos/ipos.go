@@ -276,7 +276,7 @@ func (c *IPos) verifyHeader(chain consensus.ChainReader, header *types.Header, p
 			return errLargeBlockTime
 		}
 	} else {
-		if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 {
+		if header.Time.Cmp(big.NewInt(time.Now().Unix())) > 0 { //未来区块
 			return consensus.ErrFutureBlock
 		}
 	}

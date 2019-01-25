@@ -314,6 +314,7 @@ func (d *Downloader) UnregisterPeer(id string) error {
 
 // Synchronise tries to sync up our local block chain with a remote peer, both
 // adding various sanity checks as well as wrapping it with various log entries.
+// Synchronise试图和一个peer来同步，如果同步过程中遇到一些错误，那么会删除掉Peer。然后会被重试。
 func (d *Downloader) Synchronise(id string, head common.Hash, td *big.Int, mode SyncMode) error {
 	err := d.synchronise(id, head, td, mode)
 	switch err {
@@ -341,6 +342,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 		return d.synchroniseMock(id, hash)
 	}
 	// Make sure only one goroutine is ever allowed past this point at once
+	// 这个方法同时只能运行一个， 检查是否正在运行。
 	if !atomic.CompareAndSwapInt32(&d.synchronising, 0, 1) {
 		return errBusy
 	}
@@ -351,15 +353,18 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 		log.Info("Block synchronisation started")
 	}
 	// Reset the queue, peer set and wake channels to clean any internal leftover state
+	// 重置queue和peer的状态。
 	d.queue.Reset()
 	d.peers.Reset()
 
+	// 清空d.bodyWakeCh, d.receiptWakeCh
 	for _, ch := range []chan bool{d.bodyWakeCh, d.receiptWakeCh} {
 		select {
 		case <-ch:
 		default:
 		}
 	}
+	// 清空d.headerCh, d.bodyCh, d.receiptCh
 	for _, ch := range []chan dataPack{d.headerCh, d.bodyCh, d.receiptCh} {
 		for empty := false; !empty; {
 			select {
@@ -369,6 +374,7 @@ func (d *Downloader) synchronise(id string, hash common.Hash, td *big.Int, mode 
 			}
 		}
 	}
+	// 清空headerProcCh
 	for empty := false; !empty; {
 		select {
 		case <-d.headerProcCh:
@@ -419,21 +425,22 @@ func (d *Downloader) syncWithPeer(p *peerConnection, hash common.Hash, td *big.I
 	}(time.Now())
 
 	// Look up the sync boundaries: the common ancestor and the target block
-	latest, err := d.fetchHeight(p)
+	// 寻找同步的边界：共同的祖先，目标区块
+	latest, err := d.fetchHeight(p) // 远程节点最新的区块
 	if err != nil {
 		return err
 	}
 	height := latest.Number.Uint64()
 
-	origin, err := d.findAncestor(p, height)
+	origin, err := d.findAncestor(p, height) // 寻找共同的祖先
 	if err != nil {
 		return err
 	}
 	d.syncStatsLock.Lock()
 	if d.syncStatsChainHeight <= origin || d.syncStatsChainOrigin > origin {
-		d.syncStatsChainOrigin = origin
+		d.syncStatsChainOrigin = origin // 开始同步区块的高度
 	}
-	d.syncStatsChainHeight = height
+	d.syncStatsChainHeight = height // 最高将要同步的区块
 	d.syncStatsLock.Unlock()
 
 	// Initiate the sync using a concurrent header and content retrieval algorithm
@@ -769,12 +776,13 @@ func (d *Downloader) findAncestor(p *peerConnection, height uint64) (uint64, err
 // other peers are only accepted if they map cleanly to the skeleton. If no one
 // can fill in the skeleton - not even the origin peer - it's assumed invalid and
 // the origin is dropped.
+// fetchHeaders 持续并发地从number中取区块头，直到没有区块头返回。
 func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 	p.log.Debug("Directing header downloads", "origin", from)
 	defer p.log.Debug("Header download terminated")
 
 	// Create a timeout timer, and the associated header fetcher
-	skeleton := true            // Skeleton assembly phase or finishing up
+	skeleton := false            // Skeleton assembly phase or finishing up
 	request := time.Now()       // time of the last skeleton fetch request
 	timeout := time.NewTimer(0) // timer to dump a non-responsive active peer
 	<-timeout.C                 // timeout channel should be initially empty
@@ -789,10 +797,10 @@ func (d *Downloader) fetchHeaders(p *peerConnection, from uint64) error {
 
 		if skeleton {
 			p.log.Trace("Fetching skeleton headers", "count", MaxHeaderFetch, "from", from)
-			go p.peer.RequestHeadersByNumber(from+uint64(MaxHeaderFetch)-1, MaxSkeletonSize, MaxHeaderFetch-1, false)
+			go p.peer.RequestHeadersByNumber(from, 1, 0, false)
 		} else {
 			p.log.Trace("Fetching full headers", "count", MaxHeaderFetch, "from", from)
-			go p.peer.RequestHeadersByNumber(from, MaxHeaderFetch, 0, false)
+			go p.peer.RequestHeadersByNumber(from, 1, 0, false)
 		}
 	}
 	// Start pulling the header chain skeleton until all is done
@@ -1241,6 +1249,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 			// Otherwise split the chunk of headers into batches and process them
 			gotHeaders = true
 
+			//fmt.Printf("headers %v \n" ,headers)
 			for len(headers) > 0 {
 				// Terminate if something failed in between processing chunks
 				select {
@@ -1259,7 +1268,7 @@ func (d *Downloader) processHeaders(origin uint64, td *big.Int) error {
 				if d.mode == FastSync || d.mode == LightSync {
 					// Collect the yet unknown headers to mark them as uncertain
 					unknown := make([]*types.Header, 0, len(headers))
-					for _, header := range chunk {
+					for _, header := range chunk { // 未知区块
 						if !d.lightchain.HasHeader(header.Hash(), header.Number.Uint64()) {
 							unknown = append(unknown, header)
 						}
