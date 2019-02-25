@@ -48,7 +48,7 @@ type Node struct {
 	serverConfig p2p.Config
 	server       *p2p.Server // Currently running P2P networking layer
 
-	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)
+	serviceFuncs []ServiceConstructor     // Service constructors (in dependency order)，服务构造函数（按依赖顺序）
 	services     map[reflect.Type]Service // Currently running services
 
 	rpcAPIs       []rpc.API   // List of APIs currently provided by the node
@@ -172,6 +172,7 @@ func (n *Node) Start() error {
 	services := make(map[reflect.Type]Service)
 	for _, constructor := range n.serviceFuncs {
 		// Create a new context for the particular service
+		// 为每个服务创建一个上下文
 		ctx := &ServiceContext{
 			config:         n.config,
 			services:       make(map[reflect.Type]Service),
@@ -205,6 +206,7 @@ func (n *Node) Start() error {
 		return convertFileLockError(err)
 	}
 	// Start each of the services
+	// 启动所有服务
 	started := []reflect.Type{}
 	for kind, service := range services {
 		// Start the next service, stopping all previous upon failure
@@ -263,6 +265,7 @@ func (n *Node) openDataDir() error {
 // startRPC is a helper method to start all the various RPC endpoint during node
 // startup. It's not meant to be called at any time afterwards as it makes certain
 // assumptions about the state of the node.
+// startRPC 是一个辅助方法，用来在node启动过程中，启动各种RPC端点。
 func (n *Node) startRPC(services map[reflect.Type]Service) error {
 	// Gather all the possible APIs to surface
 	apis := n.apis()

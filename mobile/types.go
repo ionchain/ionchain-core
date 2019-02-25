@@ -26,23 +26,24 @@ import (
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/rlp"
+	"math/big"
 )
 
 // A Nonce is a 64-bit hash which proves (combined with the mix-hash) that
 // a sufficient amount of computation has been carried out on a block.
-type Nonce struct {
-	nonce types.BlockNonce
-}
+//type Nonce struct {
+//	nonce types.BlockNonce
+//}
 
 // GetBytes retrieves the byte representation of the block nonce.
-func (n *Nonce) GetBytes() []byte {
-	return n.nonce[:]
-}
+//func (n *Nonce) GetBytes() []byte {
+//	return n.nonce[:]
+//}
 
 // GetHex retrieves the hex string representation of the block nonce.
-func (n *Nonce) GetHex() string {
-	return fmt.Sprintf("0x%x", n.nonce[:])
-}
+//func (n *Nonce) GetHex() string {
+//	return fmt.Sprintf("0x%x", n.nonce[:])
+//}
 
 // Bloom represents a 256 bit bloom filter.
 type Bloom struct {
@@ -116,8 +117,12 @@ func (h *Header) GetGasLimit() int64     { return h.header.GasLimit.Int64() }
 func (h *Header) GetGasUsed() int64      { return h.header.GasUsed.Int64() }
 func (h *Header) GetTime() int64         { return h.header.Time.Int64() }
 func (h *Header) GetExtra() []byte       { return h.header.Extra }
-func (h *Header) GetMixDigest() *Hash    { return &Hash{h.header.MixDigest} }
-func (h *Header) GetNonce() *Nonce       { return &Nonce{h.header.Nonce} }
+func (h *Header) GetBaseTarget() *big.Int       { return h.header.BaseTarget }
+func (h *Header) GetBlockSignature() []byte       { return h.header.BlockSignature }
+func (h *Header) GetGenerationSignature() []byte       { return h.header.GenerationSignature }
+
+//func (h *Header) GetMixDigest() *Hash    { return &Hash{h.header.MixDigest} }
+//func (h *Header) GetNonce() *Nonce       { return &Nonce{h.header.Nonce} }
 func (h *Header) GetHash() *Hash         { return &Hash{h.header.Hash()} }
 
 // Headers represents a slice of headers.
@@ -193,11 +198,17 @@ func (b *Block) GetGasLimit() int64     { return b.block.GasLimit().Int64() }
 func (b *Block) GetGasUsed() int64      { return b.block.GasUsed().Int64() }
 func (b *Block) GetTime() int64         { return b.block.Time().Int64() }
 func (b *Block) GetExtra() []byte       { return b.block.Extra() }
-func (b *Block) GetMixDigest() *Hash    { return &Hash{b.block.MixDigest()} }
-func (b *Block) GetNonce() int64        { return int64(b.block.Nonce()) }
+//func (b *Block) GetMixDigest() *Hash    { return &Hash{b.block.MixDigest()} }
+//func (b *Block) GetNonce() int64        { return int64(b.block.Nonce()) }
 
 func (b *Block) GetHash() *Hash        { return &Hash{b.block.Hash()} }
-func (b *Block) GetHashNoNonce() *Hash { return &Hash{b.block.HashNoNonce()} }
+//func (b *Block) GetHashNoNonce() *Hash { return &Hash{b.block.HashNoNonce()} }
+
+//新增字段
+func (b *Block) GetBaseTarget() *big.Int        { return b.block.BaseTarget() }
+func (b *Block) GetBlockSignature() []byte      { return b.block.BlockSignature() }
+func (b *Block) GetGenerationSignature() []byte { return b.block.GenerationSignature() }
+
 
 func (b *Block) GetHeader() *Header             { return &Header{b.block.Header()} }
 func (b *Block) GetUncles() *Headers            { return &Headers{b.block.Uncles()} }

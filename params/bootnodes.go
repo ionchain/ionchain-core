@@ -16,6 +16,11 @@
 
 package params
 
+var IONCMainnetBootnodes = []string{
+	"enode://eb40282dd3f40d2a7131289a899447a92a43289ca8e44387f11152d98ad90607fe80b0699fc6839ce20832dd250fecae1fcfb870585eb391983abfd49c57ee77@139.180.216.81:30301",  // US
+	"enode://bcc3b2404a003decca43180961133787d75a7511fd37b60e9deb15e05e2a1a75d0e8275d41464f37fa5ee88779f125991ae2a057eedad78b7d788ce85565cf4f@66.42.61.229:30301", // CN
+}
+
 // MainnetBootnodes are the enode URLs of the P2P bootstrap nodes running on
 // the main Ethereum network.
 var MainnetBootnodes = []string{

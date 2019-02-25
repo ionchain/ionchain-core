@@ -728,7 +728,7 @@ func doAndroidArchive(cmdline []string) {
 		log.Fatal("Please ensure ANDROID_NDK points to your Android NDK")
 	}
 	// Build the Android archive and Maven resources
-	build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile"))
+	//build.MustRun(goTool("get", "golang.org/x/mobile/cmd/gomobile"))
 	build.MustRun(gomobileTool("init", "--ndk", os.Getenv("ANDROID_NDK")))
 	build.MustRun(gomobileTool("bind", "--target", "android", "--javapkg", "org.ethereum", "-v", "github.com/ionchain/ionchain-core/mobile"))
 

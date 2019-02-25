@@ -187,6 +187,7 @@ func init() {
 			return err
 		}
 		// Start system runtime metrics collection
+		// 系统统计信息收集
 		go metrics.CollectProcessMetrics(3 * time.Second)
 
 		utils.SetupNetwork(ctx)
