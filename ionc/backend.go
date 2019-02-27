@@ -233,7 +233,7 @@ func (s *IONChain) APIs() []rpc.API {
 		{
 			Namespace: "ionc",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(s),
+			Service:   NewPublicIONChainAPI(s),
 			Public:    true,
 		}, /*{
 			Namespace: "ionc",

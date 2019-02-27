@@ -47,27 +47,27 @@ const defaultTraceTimeout = 5 * time.Second
 
 // PublicionchainAPI provides an API to access ionchain full node-related
 // information.
-type PublicEthereumAPI struct {
+type PublicIONChainAPI struct {
 	e *IONChain
 }
 
 // NewPublicionchainAPI creates a new ionchain protocol API for full nodes.
-func NewPublicEthereumAPI(e *IONChain) *PublicEthereumAPI {
-	return &PublicEthereumAPI{e}
+func NewPublicIONChainAPI(e *IONChain) *PublicIONChainAPI {
+	return &PublicIONChainAPI{e}
 }
 
 // Etherbase is the address that mining rewards will be send to
-func (api *PublicEthereumAPI) Etherbase() (common.Address, error) {
+func (api *PublicIONChainAPI) Etherbase() (common.Address, error) {
 	return api.e.Etherbase()
 }
 
 // Coinbase is the address that mining rewards will be send to (alias for Etherbase)
-func (api *PublicEthereumAPI) Coinbase() (common.Address, error) {
+func (api *PublicIONChainAPI) Coinbase() (common.Address, error) {
 	return api.Etherbase()
 }
 
 // Hashrate returns the POW hashrate
-//func (api *PublicEthereumAPI) Hashrate() hexutil.Uint64 {
+//func (api *PublicIONChainAPI) Hashrate() hexutil.Uint64 {
 //	return hexutil.Uint64(api.e.Miner().HashRate())
 //}
 
