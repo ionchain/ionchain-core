@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
-package geth
+package ionc
 
 import (
 	"io/ioutil"
@@ -106,7 +106,7 @@ public class AndroidTest extends InstrumentationTestCase {
 			info.getProtocols();
 
 			// Retrieve some data via the APIs (we don't really care about the results)
-			EthereumClient ec = node.getEthereumClient();
+			IONChainClient ec = node.getEthereumClient();
 			ec.getBlockByNumber(ctx, -1).getNumber();
 
 			NewHeadHandler handler = new NewHeadHandler() {

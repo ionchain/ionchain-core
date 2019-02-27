@@ -17,7 +17,7 @@
 // Contains all the wrappers from the node package to support client side node
 // management on mobile platforms.
 
-package geth
+package ionc
 
 import (
 	"encoding/json"
@@ -190,12 +190,12 @@ func (n *Node) Stop() error {
 }
 
 // GetionchainClient retrieves a client to access the ionchain subsystem.
-func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
+func (n *Node) GetEthereumClient() (client *IONChainClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {
 		return nil, err
 	}
-	return &EthereumClient{ioncclient.NewClient(rpc)}, nil
+	return &IONChainClient{ioncclient.NewClient(rpc)}, nil
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.

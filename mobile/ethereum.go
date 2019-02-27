@@ -16,7 +16,7 @@
 
 // Contains all the wrappers from the go-ionchain root package.
 
-package geth
+package ionc
 
 import (
 	"errors"
