@@ -28,9 +28,9 @@ import (
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/eth/downloader"
-	"github.com/ionchain/ionchain-core/eth/gasprice"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ionc/downloader"
+	"github.com/ionchain/ionchain-core/ionc/gasprice"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/light"
 	"github.com/ionchain/ionchain-core/params"
@@ -161,7 +161,7 @@ func (b *LesApiBackend) SuggestPrice(ctx context.Context) (*big.Int, error) {
 	return b.gpo.SuggestPrice(ctx)
 }
 
-func (b *LesApiBackend) ChainDb() ethdb.Database {
+func (b *LesApiBackend) ChainDb() ioncdb.Database {
 	return b.eth.chainDb
 }
 

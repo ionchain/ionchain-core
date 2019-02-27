@@ -27,8 +27,8 @@ import (
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/eth"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ionc"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/les/flowcontrol"
 	"github.com/ionchain/ionchain-core/light"
 	"github.com/ionchain/ionchain-core/log"
@@ -49,7 +49,7 @@ type LesServer struct {
 	chtIndexer, bloomTrieIndexer *core.ChainIndexer
 }
 
-func NewLesServer(eth *eth.IONChain, config *eth.Config) (*LesServer, error) {
+func NewLesServer(eth *ionc.IONChain, config *ionc.Config) (*LesServer, error) {
 	quitSync := make(chan struct{})
 	pm, err := NewProtocolManager(eth.BlockChain().Config(), false, ServerProtocolVersions, config.NetworkId, eth.EventMux(), eth.Engine(), newPeerSet(), eth.BlockChain(), eth.TxPool(), eth.ChainDb(), nil, nil, quitSync, new(sync.WaitGroup))
 	if err != nil {
@@ -222,7 +222,7 @@ func linRegFromBytes(data []byte) *linReg {
 
 type requestCostStats struct {
 	lock  sync.RWMutex
-	db    ethdb.Database
+	db    ioncdb.Database
 	stats map[uint64]*linReg
 }
 
@@ -233,7 +233,7 @@ type requestCostStatsRlp []struct {
 
 var rcStatsKey = []byte("_requestCostStats")
 
-func newCostStats(db ethdb.Database) *requestCostStats {
+func newCostStats(db ioncdb.Database) *requestCostStats {
 	stats := make(map[uint64]*linReg)
 	for _, code := range reqList {
 		stats[code] = &linReg{cnt: 100}

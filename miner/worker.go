@@ -30,7 +30,7 @@ import (
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
@@ -109,7 +109,7 @@ type worker struct {
 	eth     Backend
 	chain   *core.BlockChain
 	proc    core.Validator
-	chainDb ethdb.Database
+	chainDb ioncdb.Database
 
 	coinbase common.Address
 	extra    []byte

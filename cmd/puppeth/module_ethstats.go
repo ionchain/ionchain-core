@@ -34,12 +34,12 @@ FROM mhart/alpine-node:latest
 
 RUN \
   apk add --update git                                         && \
-  git clone --depth=1 https://github.com/karalabe/eth-netstats && \
+  git clone --depth=1 https://github.com/karalabe/ionc-netstats && \
 	apk del git && rm -rf /var/cache/apk/*                       && \
 	\
-  cd /eth-netstats && npm install && npm install -g grunt-cli && grunt
+  cd /ionc-netstats && npm install && npm install -g grunt-cli && grunt
 
-WORKDIR /eth-netstats
+WORKDIR /ionc-netstats
 EXPOSE 3000
 
 RUN echo 'module.exports = {trusted: [{{.Trusted}}], banned: [{{.Banned}}], reserved: ["yournode"]};' > lib/utils/config.js

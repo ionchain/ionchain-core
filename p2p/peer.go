@@ -96,7 +96,7 @@ type PeerEvent struct {
 }
 
 // Peer represents a connected remote node.
-//peer代表了一条创建好的网络链路。在一条链路上可能运行着多个协议。比如以太坊的协议(eth)。 Swarm的协议。 或者是Whisper的协议。
+//peer代表了一条创建好的网络链路。在一条链路上可能运行着多个协议。比如以太坊的协议(ionc)。 Swarm的协议。 或者是Whisper的协议。
 type Peer struct {
 	rw      *conn
 	running map[string]*protoRW

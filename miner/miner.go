@@ -26,8 +26,8 @@ import (
 	core "github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/eth/downloader"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ionc/downloader"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
@@ -40,7 +40,7 @@ type Backend interface {
 	AccountManager() *accounts.Manager
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
-	ChainDb() ethdb.Database
+	ChainDb() ioncdb.Database
 }
 
 // Miner creates blocks and searches for proof-of-work values.

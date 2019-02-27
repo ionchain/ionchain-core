@@ -25,9 +25,9 @@ import (
 	"path/filepath"
 
 	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/eth"
-	"github.com/ionchain/ionchain-core/eth/downloader"
-	"github.com/ionchain/ionchain-core/ethclient"
+	"github.com/ionchain/ionchain-core/ionc"
+	"github.com/ionchain/ionchain-core/ionc/downloader"
+	"github.com/ionchain/ionchain-core/ioncclient"
 	"github.com/ionchain/ionchain-core/ethstats"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/node"
@@ -145,7 +145,7 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	}
 	// Register the Ethereum protocol if requested
 	if config.EthereumEnabled {
-		ethConf := eth.DefaultConfig
+		ethConf := ionc.DefaultConfig
 		ethConf.Genesis = genesis
 		ethConf.SyncMode = downloader.LightSync
 		ethConf.NetworkId = uint64(config.EthereumNetworkID)
@@ -195,7 +195,7 @@ func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
 	if err != nil {
 		return nil, err
 	}
-	return &EthereumClient{ethclient.NewClient(rpc)}, nil
+	return &EthereumClient{ioncclient.NewClient(rpc)}, nil
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.

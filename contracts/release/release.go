@@ -27,7 +27,7 @@ import (
 
 	"github.com/ionchain/ionchain-core/accounts/abi/bind"
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/eth"
+	"github.com/ionchain/ionchain-core/ionc"
 	"github.com/ionchain/ionchain-core/internal/ethapi"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/log"
@@ -62,7 +62,7 @@ type ReleaseService struct {
 func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, error) {
 	// Retrieve the Ethereum service dependency to access the blockchain
 	var apiBackend ethapi.Backend
-	var ethereum *eth.IONChain
+	var ethereum *ionc.IONChain
 	if err := ctx.Service(&ethereum); err == nil {
 		apiBackend = ethereum.ApiBackend
 	} else {
@@ -74,7 +74,7 @@ func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, e
 		}
 	}
 	// Construct the release service
-	contract, err := NewReleaseOracle(config.Oracle, eth.NewContractBackend(apiBackend))
+	contract, err := NewReleaseOracle(config.Oracle, ionc.NewContractBackend(apiBackend))
 	if err != nil {
 		return nil, err
 	}

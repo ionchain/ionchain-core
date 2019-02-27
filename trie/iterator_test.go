@@ -23,7 +23,7 @@ import (
 	"testing"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ioncdb"
 )
 
 func TestIterator(t *testing.T) {
@@ -113,7 +113,7 @@ func TestNodeIteratorCoverage(t *testing.T) {
 			t.Errorf("failed to retrieve reported node %x: %v", hash, err)
 		}
 	}
-	for _, key := range db.(*ethdb.MemDatabase).Keys() {
+	for _, key := range db.(*ioncdb.MemDatabase).Keys() {
 		if _, ok := hashes[common.BytesToHash(key)]; !ok {
 			t.Errorf("state entry not reported %x", key)
 		}
@@ -279,7 +279,7 @@ func TestIteratorNoDups(t *testing.T) {
 
 // This test checks that nodeIterator.Next can be retried after inserting missing trie nodes.
 func TestIteratorContinueAfterError(t *testing.T) {
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := ioncdb.NewMemDatabase()
 	tr, _ := New(common.Hash{}, db)
 	for _, val := range testdata1 {
 		tr.Update([]byte(val.k), []byte(val.v))
@@ -330,7 +330,7 @@ func TestIteratorContinueAfterError(t *testing.T) {
 // should retry seeking before returning true for the first time.
 func TestIteratorContinueAfterSeekError(t *testing.T) {
 	// Commit test trie to db, then remove the node containing "bars".
-	db, _ := ethdb.NewMemDatabase()
+	db, _ := ioncdb.NewMemDatabase()
 	ctr, _ := New(common.Hash{}, db)
 	for _, val := range testdata1 {
 		ctr.Update([]byte(val.k), []byte(val.v))

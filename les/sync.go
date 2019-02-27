@@ -21,7 +21,7 @@ import (
 	"time"
 
 	"github.com/ionchain/ionchain-core/core"
-	"github.com/ionchain/ionchain-core/eth/downloader"
+	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/light"
 )
 

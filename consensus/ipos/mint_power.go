@@ -5,7 +5,7 @@ import (
 	"github.com/ionchain/ionchain-core/rpc"
 	ionchain "github.com/ionchain/ionchain-core"
 	"context"
-	"github.com/ionchain/ionchain-core/ethclient"
+	"github.com/ionchain/ionchain-core/ioncclient"
 	"github.com/ionchain/ionchain-core/common"
 	"math/big"
 	"github.com/ionchain/ionchain-core/params"
@@ -18,12 +18,12 @@ const (
 	IPOSContractAddress = "0x0000000000000000000000000000000000000100"
 )
 
-var ecClient *ethclient.Client
+var ecClient *ioncclient.Client
 
 var rpcLocker = new(sync.Mutex)
 
 func mintPower(addr common.Address, ipcEndpoint string) (*big.Int, error) {
-	ec, err := dialRPC(ipcEndpoint) //ipc:~/.ionc/db/geth.ipc 成功后放入一个缓存
+	ec, err := dialRPC(ipcEndpoint) //ipc:~/.ionc/db/ionc.ipc 成功后放入一个缓存
 	if err != nil {
 		fmt.Errorf("error %v \n", err)
 		return nil, err
@@ -45,7 +45,7 @@ func mintPower(addr common.Address, ipcEndpoint string) (*big.Int, error) {
 	return b.Div(b, ether), nil
 
 }
-func dialRPC(endpoint string) (*ethclient.Client, error) {
+func dialRPC(endpoint string) (*ioncclient.Client, error) {
 	rpcLocker.Lock()
 	defer rpcLocker.Unlock()
 	if ecClient != nil {
@@ -60,7 +60,7 @@ func dialRPC(endpoint string) (*ethclient.Client, error) {
 		return nil, err
 	}
 
-	ec := ethclient.NewClient(client)
+	ec := ioncclient.NewClient(client)
 	if ecClient == nil {
 		ecClient = ec
 	}

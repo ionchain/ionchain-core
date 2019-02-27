@@ -6,7 +6,7 @@ import (
 	"github.com/ionchain/ionchain-core/consensus"
 	"github.com/ionchain/ionchain-core/rpc"
 	"github.com/ionchain/ionchain-core/core/state"
-	"github.com/ionchain/ionchain-core/ethdb"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"math/big"
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/crypto/sha3"
@@ -89,7 +89,7 @@ func sigHash(header *types.Header) (hash common.Hash) {
 }
 
 type IPos struct {
-	db          ethdb.Database
+	db          ioncdb.Database
 	IpcEndpoint string
 
 	signer common.Address // Ethereum address of the signing key 签名的地址
@@ -97,7 +97,7 @@ type IPos struct {
 	lock   sync.RWMutex   // Protects the signer fields
 }
 
-func New(db ethdb.Database, IpcEndpoint string) *IPos {
+func New(db ioncdb.Database, IpcEndpoint string) *IPos {
 
 	return &IPos{
 		db:          db,

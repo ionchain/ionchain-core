@@ -28,7 +28,7 @@ import (
 	"github.com/ionchain/ionchain-core/contracts/chequebook"
 	"github.com/ionchain/ionchain-core/contracts/ens"
 	"github.com/ionchain/ionchain-core/crypto"
-	"github.com/ionchain/ionchain-core/ethclient"
+	"github.com/ionchain/ionchain-core/ioncclient"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/p2p"
@@ -76,7 +76,7 @@ func (self *Swarm) API() *SwarmAPI {
 
 // creates a new swarm service instance
 // implements node.Service
-func NewSwarm(ctx *node.ServiceContext, backend chequebook.Backend, ensClient *ethclient.Client, config *api.Config, swapEnabled, syncEnabled bool, cors string) (self *Swarm, err error) {
+func NewSwarm(ctx *node.ServiceContext, backend chequebook.Backend, ensClient *ioncclient.Client, config *api.Config, swapEnabled, syncEnabled bool, cors string) (self *Swarm, err error) {
 	if bytes.Equal(common.FromHex(config.PublicKey), storage.ZeroKey) {
 		return nil, fmt.Errorf("empty public key")
 	}
