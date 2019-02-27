@@ -92,7 +92,7 @@ type IPos struct {
 	db          ioncdb.Database
 	IpcEndpoint string
 
-	signer common.Address // Ethereum address of the signing key 签名的地址
+	signer common.Address // ionchain address of the signing key 签名的地址
 	signFn SignerFn       // Signer function to authorize hashes with
 	lock   sync.RWMutex   // Protects the signer fields
 }
@@ -105,7 +105,7 @@ func New(db ioncdb.Database, IpcEndpoint string) *IPos {
 	}
 }
 
-// Author retrieves the Ethereum address of the account that minted the given
+// Author retrieves the ionchain address of the account that minted the given
 // block, which may be different from the header's coinbase if a consensus
 // engine is based on signatures.
 // 返回挖出区块的矿工地址
@@ -114,7 +114,7 @@ func (c *IPos) Author(header *types.Header) (common.Address, error) {
 }
 
 // VerifyUncles verifies that the given block's uncles conform to the consensus
-// rules of the stock Ethereum ethash engine.
+// rules of the stock ionchain ethash engine.
 func (c *IPos) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 
 	// Verify that there are at most 2 uncles included in this block

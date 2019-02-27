@@ -1,18 +1,18 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of go-ethereum.
+// Copyright 2017 The go-ionchain Authors
+// This file is part of go-ionchain.
 //
-// go-ethereum is free software: you can redistribute it and/or modify
+// go-ionchain is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// go-ethereum is distributed in the hope that it will be useful,
+// go-ionchain is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with go-ethereum. If not, see <http://www.gnu.org/licenses/>.
+// along with go-ionchain. If not, see <http://www.gnu.org/licenses/>.
 
 // faucet is a Ether faucet backed by a light client.
 package main
@@ -185,16 +185,16 @@ func main() {
 // request represents an accepted funding request.
 type request struct {
 	Avatar  string             `json:"avatar"`  // Avatar URL to make the UI nicer
-	Account common.Address     `json:"account"` // Ethereum address being funded
+	Account common.Address     `json:"account"` // ionchain address being funded
 	Time    time.Time          `json:"time"`    // Timestamp when the request was accepted
 	Tx      *types.Transaction `json:"tx"`      // Transaction funding the account
 }
 
-// faucet represents a crypto faucet backed by an Ethereum light client.
+// faucet represents a crypto faucet backed by an ionchain light client.
 type faucet struct {
 	config *params.ChainConfig // Chain configurations for signing
-	stack  *node.Node          // Ethereum protocol stack
-	client *ioncclient.Client  // Client connection to the Ethereum chain
+	stack  *node.Node          // ionchain protocol stack
+	client *ioncclient.Client  // Client connection to the ionchain chain
 	index  []byte              // Index page to serve up on the web
 
 	keystore *keystore.KeyStore // Keystore containing the single signer
@@ -229,7 +229,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	if err != nil {
 		return nil, err
 	}
-	// Assemble the Ethereum light client protocol
+	// Assemble the ionchain light client protocol
 	if err := stack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 		cfg := ionc.DefaultConfig
 		cfg.SyncMode = downloader.LightSync
@@ -277,7 +277,7 @@ func newFaucet(genesis *core.Genesis, port int, enodes []*discv5.Node, network u
 	}, nil
 }
 
-// close terminates the Ethereum connection and tears down the faucet.
+// close terminates the ionchain connection and tears down the faucet.
 func (f *faucet) close() error {
 	return f.stack.Stop()
 }
@@ -427,7 +427,7 @@ func (f *faucet) apiHandler(conn *websocket.Conn) {
 				continue
 			}
 		}
-		// Retrieve the Ethereum address to fund, the requesting user and a profile picture
+		// Retrieve the ionchain address to fund, the requesting user and a profile picture
 		var (
 			username string
 			avatar   string
@@ -619,7 +619,7 @@ func sendSuccess(conn *websocket.Conn, msg string) error {
 }
 
 // authGitHub tries to authenticate a faucet request using GitHub gists, returning
-// the username, avatar URL and Ethereum address to fund on success.
+// the username, avatar URL and ionchain address to fund on success.
 func authGitHub(url string) (string, string, common.Address, error) {
 	// Retrieve the gist from the GitHub Gist APIs
 	parts := strings.Split(url, "/")
@@ -647,7 +647,7 @@ func authGitHub(url string) (string, string, common.Address, error) {
 	if gist.Owner.Login == "" {
 		return "", "", common.Address{}, errors.New("Anonymous Gists not allowed")
 	}
-	// Iterate over all the files and look for Ethereum addresses
+	// Iterate over all the files and look for ionchain addresses
 	var address common.Address
 	for _, file := range gist.Files {
 		content := strings.TrimSpace(file.Content)
@@ -672,7 +672,7 @@ func authGitHub(url string) (string, string, common.Address, error) {
 }
 
 // authTwitter tries to authenticate a faucet request using Twitter posts, returning
-// the username, avatar URL and Ethereum address to fund on success.
+// the username, avatar URL and ionchain address to fund on success.
 func authTwitter(url string) (string, string, common.Address, error) {
 	// Ensure the user specified a meaningful URL, no fancy nonsense
 	parts := strings.Split(url, "/")
@@ -683,7 +683,7 @@ func authTwitter(url string) (string, string, common.Address, error) {
 
 	// Twitter's API isn't really friendly with direct links. Still, we don't
 	// want to do ask read permissions from users, so just load the public posts and
-	// scrape it for the Ethereum address and profile URL.
+	// scrape it for the ionchain address and profile URL.
 	res, err := http.Get(url)
 	if err != nil {
 		return "", "", common.Address{}, err
@@ -710,7 +710,7 @@ func authTwitter(url string) (string, string, common.Address, error) {
 }
 
 // authGooglePlus tries to authenticate a faucet request using GooglePlus posts,
-// returning the username, avatar URL and Ethereum address to fund on success.
+// returning the username, avatar URL and ionchain address to fund on success.
 func authGooglePlus(url string) (string, string, common.Address, error) {
 	// Ensure the user specified a meaningful URL, no fancy nonsense
 	parts := strings.Split(url, "/")
@@ -721,7 +721,7 @@ func authGooglePlus(url string) (string, string, common.Address, error) {
 
 	// Google's API isn't really friendly with direct links. Still, we don't
 	// want to do ask read permissions from users, so just load the public posts and
-	// scrape it for the Ethereum address and profile URL.
+	// scrape it for the ionchain address and profile URL.
 	res, err := http.Get(url)
 	if err != nil {
 		return "", "", common.Address{}, err
@@ -744,7 +744,7 @@ func authGooglePlus(url string) (string, string, common.Address, error) {
 }
 
 // authFacebook tries to authenticate a faucet request using Facebook posts,
-// returning the username, avatar URL and Ethereum address to fund on success.
+// returning the username, avatar URL and ionchain address to fund on success.
 func authFacebook(url string) (string, string, common.Address, error) {
 	// Ensure the user specified a meaningful URL, no fancy nonsense
 	parts := strings.Split(url, "/")
@@ -755,7 +755,7 @@ func authFacebook(url string) (string, string, common.Address, error) {
 
 	// Facebook's Graph API isn't really friendly with direct links. Still, we don't
 	// want to do ask read permissions from users, so just load the public posts and
-	// scrape it for the Ethereum address and profile URL.
+	// scrape it for the ionchain address and profile URL.
 	res, err := http.Get(url)
 	if err != nil {
 		return "", "", common.Address{}, err

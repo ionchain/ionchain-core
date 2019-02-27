@@ -1,20 +1,20 @@
-// Copyright 2014 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2014 The go-ionchain Authors
+// This file is part of the go-ionchain library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-ionchain library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-ionchain library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package ionc implements the Ethereum protocol.
+// Package ionc implements the ionchain protocol.
 package ionc
 
 import (
@@ -56,13 +56,13 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *core.ChainIndexer)
 }
 
-// Ethereum implements the Ethereum full node service.
+// ionchain implements the Ethereum full node service.
 type IONChain struct {
 	config      *Config
 	chainConfig *params.ChainConfig
 
 	// Channel for shutting down the service
-	shutdownChan  chan bool    // Channel for shutting down the ethereum
+	shutdownChan  chan bool    // Channel for shutting down the ionchain
 	stopDbUpgrade func() error // stop chain db sequential key upgrade
 
 	// Handlers
@@ -99,8 +99,8 @@ func (s *IONChain) AddLesServer(ls LesServer) {
 	ls.SetBloomBitsIndexer(s.bloomIndexer)
 }
 
-// New creates a new Ethereum object (including the
-// initialisation of the common Ethereum object)
+// New creates a new ionchain object (including the
+// initialisation of the common ionchain object)
 func New(ctx *node.ServiceContext, config *Config) (*IONChain, error) {
 	if config.SyncMode == downloader.LightSync {
 		return nil, errors.New("can't run ionc.Ethereum in light sync mode, use les.LightEthereum")
@@ -215,12 +215,12 @@ func CreateDB(ctx *node.ServiceContext, config *Config, name string) (ioncdb.Dat
 	return db, nil
 }
 
-// CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
+// CreateConsensusEngine creates the required type of consensus engine instance for an ionchain service
 func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig *params.ChainConfig, db ioncdb.Database) consensus.Engine {
 	return ipos.New(db, ctx.IpcEndpoint)
 }
 
-// APIs returns the collection of RPC services the ethereum package offers.
+// APIs returns the collection of RPC services the ionchain package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *IONChain) APIs() []rpc.API {
 	apis := ethapi.GetAPIs(s.ApiBackend)
@@ -360,7 +360,7 @@ func (s *IONChain) Protocols() []p2p.Protocol {
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
-// Ethereum protocol implementation.
+// ionchain protocol implementation.
 func (s *IONChain) Start(srvr *p2p.Server) error {
 	// Start the bloom bits servicing goroutines
 	s.startBloomHandlers()

@@ -1,18 +1,18 @@
-// Copyright 2015 The go-ethereum Authors
-// This file is part of the go-ethereum library.
+// Copyright 2015 The go-ionchain Authors
+// This file is part of the go-ionchain library.
 //
-// The go-ethereum library is free software: you can redistribute it and/or modify
+// The go-ionchain library is free software: you can redistribute it and/or modify
 // it under the terms of the GNU Lesser General Public License as published by
 // the Free Software Foundation, either version 3 of the License, or
 // (at your option) any later version.
 //
-// The go-ethereum library is distributed in the hope that it will be useful,
+// The go-ionchain library is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU Lesser General Public License for more details.
 //
 // You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+// along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
 package ionc
 
@@ -29,21 +29,21 @@ import (
 	"github.com/ionchain/ionchain-core/rpc"
 )
 
-// ContractBackend implements bind.ContractBackend with direct calls to Ethereum
+// ContractBackend implements bind.ContractBackend with direct calls to ionchain
 // internals to support operating on contracts within subprotocols like ionc and
 // swarm.
 //
-// Internally this backend uses the already exposed API endpoints of the Ethereum
+// Internally this backend uses the already exposed API endpoints of the ionchain
 // object. These should be rewritten to internal Go method calls when the Go API
 // is refactored to support a clean library use.
 type ContractBackend struct {
-	eapi  *ethapi.PublicEthereumAPI        // Wrapper around the Ethereum object to access metadata
+	eapi  *ethapi.PublicEthereumAPI        // Wrapper around the ionchain object to access metadata
 	bcapi *ethapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
 	txapi *ethapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
 }
 
 // NewContractBackend creates a new native contract backend using an existing
-// Ethereum object.
+// ionchain object.
 func NewContractBackend(apiBackend ethapi.Backend) *ContractBackend {
 	return &ContractBackend{
 		eapi:  ethapi.NewPublicEthereumAPI(apiBackend),
@@ -62,7 +62,7 @@ func (b *ContractBackend) PendingCodeAt(ctx context.Context, contract common.Add
 	return b.bcapi.GetCode(ctx, contract, rpc.PendingBlockNumber)
 }
 
-// ContractCall implements bind.ContractCaller executing an Ethereum contract
+// ContractCall implements bind.ContractCaller executing an ionchain contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
 func (b *ContractBackend) CallContract(ctx context.Context, msg ethereum.CallMsg, blockNum *big.Int) ([]byte, error) {
@@ -70,7 +70,7 @@ func (b *ContractBackend) CallContract(ctx context.Context, msg ethereum.CallMsg
 	return out, err
 }
 
-// ContractCall implements bind.ContractCaller executing an Ethereum contract
+// ContractCall implements bind.ContractCaller executing an ionchain contract
 // call with the specified data as the input. The pending flag requests execution
 // against the pending block, not the stable head of the chain.
 func (b *ContractBackend) PendingCallContract(ctx context.Context, msg ethereum.CallMsg) ([]byte, error) {
