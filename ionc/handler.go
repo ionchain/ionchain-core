@@ -192,7 +192,7 @@ func (pm *ProtocolManager) removePeer(id string) {
 	if peer == nil {
 		return
 	}
-	log.Debug("Removing Ethereum peer", "peer", id)
+	log.Debug("Removing ionchain peer", "peer", id)
 
 	// Unregister the peer from the downloader and ionchain peer set
 	pm.downloader.UnregisterPeer(id)
@@ -224,7 +224,7 @@ func (pm *ProtocolManager) Start(maxPeers int) {
 }
 
 func (pm *ProtocolManager) Stop() {
-	log.Info("Stopping Ethereum protocol")
+	log.Info("Stopping ionchain protocol")
 
 	pm.txSub.Unsubscribe()         // quits txBroadcastLoop
 	pm.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
@@ -245,7 +245,7 @@ func (pm *ProtocolManager) Stop() {
 	// Wait for all peer handler goroutines and the loops to come down.
 	pm.wg.Wait()
 
-	log.Info("Ethereum protocol stopped")
+	log.Info("ionchain protocol stopped")
 }
 
 func (pm *ProtocolManager) newPeer(pv int, p *p2p.Peer, rw p2p.MsgReadWriter) *peer {
@@ -258,12 +258,12 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	if pm.peers.Len() >= pm.maxPeers {
 		return p2p.DiscTooManyPeers
 	}
-	p.Log().Debug("Ethereum peer connected", "name", p.Name())
+	p.Log().Debug("ionchain peer connected", "name", p.Name())
 
 	// Execute the ionchain handshake
 	td, head, genesis := pm.blockchain.Status() // 总难度，区块头，创世块
 	if err := p.Handshake(pm.networkId, td, head, genesis); err != nil {
-		p.Log().Debug("Ethereum handshake failed", "err", err)
+		p.Log().Debug("ionchain handshake failed", "err", err)
 		return err
 	}
 	if rw, ok := p.rw.(*meteredMsgReadWriter); ok {
@@ -272,7 +272,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// Register the peer locally
 	// 在本地注册peer
 	if err := pm.peers.Register(p); err != nil {
-		p.Log().Error("Ethereum peer registration failed", "err", err)
+		p.Log().Error("ionchain peer registration failed", "err", err)
 		return err
 	}
 	defer pm.removePeer(p.id)
@@ -309,7 +309,7 @@ func (pm *ProtocolManager) handle(p *peer) error {
 	// 主循环，处理incoming 消息
 	for {
 		if err := pm.handleMsg(p); err != nil {
-			p.Log().Debug("Ethereum message handling failed", "err", err)
+			p.Log().Debug("ionchain message handling failed", "err", err)
 			return err
 		}
 	}

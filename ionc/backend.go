@@ -103,7 +103,7 @@ func (s *IONChain) AddLesServer(ls LesServer) {
 // initialisation of the common ionchain object)
 func New(ctx *node.ServiceContext, config *Config) (*IONChain, error) {
 	if config.SyncMode == downloader.LightSync {
-		return nil, errors.New("can't run ionc.Ethereum in light sync mode, use les.LightEthereum")
+		return nil, errors.New("can't run ionc.ionchain in light sync mode, use les.Lightionchain")
 	}
 	if !config.SyncMode.IsValid() {
 		return nil, fmt.Errorf("invalid sync mode %d", config.SyncMode)
@@ -136,7 +136,7 @@ func New(ctx *node.ServiceContext, config *Config) (*IONChain, error) {
 		bloomIndexer:   NewBloomIndexer(chainDb, params.BloomBitsBlocks),
 	}
 
-	log.Info("Initialising Ethereum protocol", "versions", ProtocolVersions, "network", config.NetworkId)
+	log.Info("Initialising ionchain protocol", "versions", ProtocolVersions, "network", config.NetworkId)
 
 	// 检查数据库里面存储的BlockChainVersion和客户端的BlockChainVersion的版本是否一致
 	if !config.SkipBcVersionCheck {

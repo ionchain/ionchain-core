@@ -69,7 +69,7 @@ var (
 	licenseCommentRE = regexp.MustCompile(`^//\s*(Copyright|This file is part of).*?\n(?://.*?\n)*\n*`)
 
 	// this text appears at the start of AUTHORS
-	authorsFileHeader = "# This is the official list of go-ethereum authors for copyright purposes.\n\n"
+	authorsFileHeader = "# This is the official list of go-ionchain authors for copyright purposes.\n\n"
 )
 
 // this template generates the license comment.
@@ -114,12 +114,12 @@ func (i info) ShortLicense() string {
 
 func (i info) Whole(startOfSentence bool) string {
 	if i.gpl() {
-		return "go-ethereum"
+		return "go-ionchain"
 	}
 	if startOfSentence {
-		return "The go-ethereum library"
+		return "The go-ionchain library"
 	}
-	return "the go-ethereum library"
+	return "the go-ionchain library"
 }
 
 func (i info) gpl() bool {
