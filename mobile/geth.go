@@ -158,7 +158,7 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 		// If netstats reporting is requested, do it
 		if config.EthereumNetStats != "" {
 			if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-				var lesServ *les.LightEthereum
+				var lesServ *les.LightIONChain
 				ctx.Service(&lesServ)
 
 				return ethstats.New(config.EthereumNetStats, nil, lesServ)

@@ -45,7 +45,7 @@ import (
 	rpc "github.com/ionchain/ionchain-core/rpc"
 )
 
-type LightEthereum struct {
+type LightIONChain struct {
 	odr         *LesOdr
 	relay       *LesTxRelay
 	chainConfig *params.ChainConfig
@@ -77,7 +77,7 @@ type LightEthereum struct {
 	wg sync.WaitGroup
 }
 
-func New(ctx *node.ServiceContext, config *ionc.Config) (*LightEthereum, error) {
+func New(ctx *node.ServiceContext, config *ionc.Config) (*LightIONChain, error) {
 	// 轻节点的leveldb数据库文件
 	chainDb, err := ionc.CreateDB(ctx, config, "lightchaindata")
 	if err != nil {
@@ -94,7 +94,7 @@ func New(ctx *node.ServiceContext, config *ionc.Config) (*LightEthereum, error) 
 	quitSync := make(chan struct{})
 
 	// 轻节点eth协议
-	leth := &LightEthereum{
+	leth := &LightIONChain{
 		chainConfig:      chainConfig,
 		chainDb:          chainDb,
 		eventMux:         ctx.EventMux,
@@ -177,7 +177,7 @@ func (s *LightDummyAPI) Mining() bool {
 
 // APIs returns the collection of RPC services the ethereum package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
-func (s *LightEthereum) APIs() []rpc.API {
+func (s *LightIONChain) APIs() []rpc.API {
 	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
 			Namespace: "ionc",
@@ -203,26 +203,26 @@ func (s *LightEthereum) APIs() []rpc.API {
 	}...)
 }
 
-func (s *LightEthereum) ResetWithGenesisBlock(gb *types.Block) {
+func (s *LightIONChain) ResetWithGenesisBlock(gb *types.Block) {
 	s.blockchain.ResetWithGenesisBlock(gb)
 }
 
-func (s *LightEthereum) BlockChain() *light.LightChain      { return s.blockchain }
-func (s *LightEthereum) TxPool() *light.TxPool              { return s.txPool }
-func (s *LightEthereum) Engine() consensus.Engine           { return s.engine }
-func (s *LightEthereum) LesVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
-func (s *LightEthereum) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
-func (s *LightEthereum) EventMux() *event.TypeMux           { return s.eventMux }
+func (s *LightIONChain) BlockChain() *light.LightChain      { return s.blockchain }
+func (s *LightIONChain) TxPool() *light.TxPool              { return s.txPool }
+func (s *LightIONChain) Engine() consensus.Engine           { return s.engine }
+func (s *LightIONChain) LesVersion() int                    { return int(s.protocolManager.SubProtocols[0].Version) }
+func (s *LightIONChain) Downloader() *downloader.Downloader { return s.protocolManager.downloader }
+func (s *LightIONChain) EventMux() *event.TypeMux           { return s.eventMux }
 
 // Protocols implements node.Service, returning all the currently configured
 // network protocols to start.
-func (s *LightEthereum) Protocols() []p2p.Protocol {
+func (s *LightIONChain) Protocols() []p2p.Protocol {
 	return s.protocolManager.SubProtocols
 }
 
 // Start implements node.Service, starting all internal goroutines needed by the
 // Ethereum protocol implementation.
-func (s *LightEthereum) Start(srvr *p2p.Server) error {
+func (s *LightIONChain) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 	log.Warn("Light client mode is an experimental feature")
 	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.networkId)
@@ -236,7 +236,7 @@ func (s *LightEthereum) Start(srvr *p2p.Server) error {
 
 // Stop implements node.Service, terminating all internal goroutines used by the
 // Ethereum protocol.
-func (s *LightEthereum) Stop() error {
+func (s *LightIONChain) Stop() error {
 	s.odr.Stop()
 	if s.bloomIndexer != nil {
 		s.bloomIndexer.Close()

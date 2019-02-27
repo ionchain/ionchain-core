@@ -1099,7 +1099,7 @@ func RegisterEthStatsService(stack *node.Node, url string) {
 		var ethServ *ionc.IONChain
 		ctx.Service(&ethServ)
 
-		var lesServ *les.LightEthereum
+		var lesServ *les.LightIONChain
 		ctx.Service(&lesServ)
 
 		return ethstats.New(url, ethServ, lesServ)

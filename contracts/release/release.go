@@ -66,7 +66,7 @@ func NewReleaseService(ctx *node.ServiceContext, config Config) (node.Service, e
 	if err := ctx.Service(&ethereum); err == nil {
 		apiBackend = ethereum.ApiBackend
 	} else {
-		var ethereum *les.LightEthereum
+		var ethereum *les.LightIONChain
 		if err := ctx.Service(&ethereum); err == nil {
 			apiBackend = ethereum.ApiBackend
 		} else {
