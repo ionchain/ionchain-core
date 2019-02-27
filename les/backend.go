@@ -35,7 +35,7 @@ import (
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/event"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/light"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/node"
@@ -72,7 +72,7 @@ type LightIONChain struct {
 	accountManager *accounts.Manager
 
 	networkId     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *ioncapi.PublicNetAPI
 
 	wg sync.WaitGroup
 }
@@ -178,7 +178,7 @@ func (s *LightDummyAPI) Mining() bool {
 // APIs returns the collection of RPC services the ionchain package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *LightIONChain) APIs() []rpc.API {
-	return append(ethapi.GetAPIs(s.ApiBackend), []rpc.API{
+	return append(ioncapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
 			Namespace: "ionc",
 			Version:   "1.0",
@@ -225,7 +225,7 @@ func (s *LightIONChain) Protocols() []p2p.Protocol {
 func (s *LightIONChain) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 	log.Warn("Light client mode is an experimental feature")
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.networkId)
+	s.netRPCService = ioncapi.NewPublicNetAPI(srvr, s.networkId)
 	// search the topic belonging to the oldest supported protocol because
 	// servers always advertise all supported protocols
 	protocolVersion := ClientProtocolVersions[len(ClientProtocolVersions)-1]

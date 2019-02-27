@@ -50,25 +50,25 @@ type NodeConfig struct {
 	MaxPeers int
 
 	// ionchainEnabled specifies whether the node should run the ionchain protocol.
-	EthereumEnabled bool
+	IONChainEnabled bool
 
 	// ionchainNetworkID is the network identifier used by the ionchain protocol to
 	// decide if remote peers should be accepted or not.
-	EthereumNetworkID int64 // uint64 in truth, but Java can't handle that...
+	IONChainNetworkID int64 // uint64 in truth, but Java can't handle that...
 
 	// ionchainGenesis is the genesis JSON to use to seed the blockchain with. An
 	// empty genesis state is equivalent to using the mainnet's state.
-	EthereumGenesis string
+	IONChainGenesis string
 
 	// ionchainDatabaseCache is the system memory in MB to allocate for database caching.
 	// A minimum of 16MB is always reserved.
-	EthereumDatabaseCache int
+	IONChainDatabaseCache int
 
 	// ionchainNetStats is a netstats connection string to use to report various
 	// chain, transaction and node stats to a monitoring server.
 	//
 	// It has the form "nodename:secret@host:port"
-	EthereumNetStats string
+	IONChainNetStats string
 
 	// WhisperEnabled specifies whether the node should run the Whisper protocol.
 	WhisperEnabled bool
@@ -79,9 +79,9 @@ type NodeConfig struct {
 var defaultNodeConfig = &NodeConfig{
 	BootstrapNodes:        FoundationBootnodes(),
 	MaxPeers:              25,
-	EthereumEnabled:       true,
-	EthereumNetworkID:     1,
-	EthereumDatabaseCache: 16,
+	IONChainEnabled:       true,
+	IONChainNetworkID:     1,
+	IONChainDatabaseCache: 16,
 }
 
 // NewNodeConfig creates a new node option set, initialized to the default values.
@@ -129,39 +129,39 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	}
 
 	var genesis *core.Genesis
-	if config.EthereumGenesis != "" {
+	if config.IONChainGenesis != "" {
 		// Parse the user supplied genesis spec if not mainnet
 		genesis = new(core.Genesis)
-		if err := json.Unmarshal([]byte(config.EthereumGenesis), genesis); err != nil {
+		if err := json.Unmarshal([]byte(config.IONChainGenesis), genesis); err != nil {
 			return nil, fmt.Errorf("invalid genesis spec: %v", err)
 		}
 		// If we have the testnet, hard code the chain configs too
-		if config.EthereumGenesis == TestnetGenesis() {
+		if config.IONChainGenesis == TestnetGenesis() {
 			genesis.Config = params.TestnetChainConfig
-			if config.EthereumNetworkID == 1 {
-				config.EthereumNetworkID = 3
+			if config.IONChainNetworkID == 1 {
+				config.IONChainNetworkID = 3
 			}
 		}
 	}
 	// Register the ionchain protocol if requested
-	if config.EthereumEnabled {
+	if config.IONChainEnabled {
 		ethConf := ionc.DefaultConfig
 		ethConf.Genesis = genesis
 		ethConf.SyncMode = downloader.LightSync
-		ethConf.NetworkId = uint64(config.EthereumNetworkID)
-		ethConf.DatabaseCache = config.EthereumDatabaseCache
+		ethConf.NetworkId = uint64(config.IONChainNetworkID)
+		ethConf.DatabaseCache = config.IONChainDatabaseCache
 		if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 			return les.New(ctx, &ethConf)
 		}); err != nil {
 			return nil, fmt.Errorf("ionchain init: %v", err)
 		}
 		// If netstats reporting is requested, do it
-		if config.EthereumNetStats != "" {
+		if config.IONChainNetStats != "" {
 			if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
 				var lesServ *les.LightIONChain
 				ctx.Service(&lesServ)
 
-				return ethstats.New(config.EthereumNetStats, nil, lesServ)
+				return ethstats.New(config.IONChainNetStats, nil, lesServ)
 			}); err != nil {
 				return nil, fmt.Errorf("netstats init: %v", err)
 			}
@@ -190,7 +190,7 @@ func (n *Node) Stop() error {
 }
 
 // GetionchainClient retrieves a client to access the ionchain subsystem.
-func (n *Node) GetEthereumClient() (client *IONChainClient, _ error) {
+func (n *Node) GetIONChainClient() (client *IONChainClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {
 		return nil, err

@@ -15,7 +15,7 @@
 // along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
 // Package ethapi implements the general ionchain API functions.
-package ethapi
+package ioncapi
 
 import (
 	"context"
@@ -76,7 +76,7 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 		{
 			Namespace: "ionc",
 			Version:   "1.0",
-			Service:   NewPublicEthereumAPI(apiBackend),
+			Service:   NewPublicIONChainAPI(apiBackend),
 			Public:    true,
 		}, {
 			Namespace: "ionc",

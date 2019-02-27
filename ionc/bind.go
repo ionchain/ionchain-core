@@ -24,7 +24,7 @@ import (
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
 	"github.com/ionchain/ionchain-core/core/types"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/rlp"
 	"github.com/ionchain/ionchain-core/rpc"
 )
@@ -37,18 +37,18 @@ import (
 // object. These should be rewritten to internal Go method calls when the Go API
 // is refactored to support a clean library use.
 type ContractBackend struct {
-	eapi  *ethapi.PublicEthereumAPI        // Wrapper around the ionchain object to access metadata
-	bcapi *ethapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
-	txapi *ethapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
+	eapi  *ioncapi.PublicIONChainAPI        // Wrapper around the ionchain object to access metadata
+	bcapi *ioncapi.PublicBlockChainAPI      // Wrapper around the blockchain to access chain data
+	txapi *ioncapi.PublicTransactionPoolAPI // Wrapper around the transaction pool to access transaction data
 }
 
 // NewContractBackend creates a new native contract backend using an existing
 // ionchain object.
-func NewContractBackend(apiBackend ethapi.Backend) *ContractBackend {
+func NewContractBackend(apiBackend ioncapi.Backend) *ContractBackend {
 	return &ContractBackend{
-		eapi:  ethapi.NewPublicEthereumAPI(apiBackend),
-		bcapi: ethapi.NewPublicBlockChainAPI(apiBackend),
-		txapi: ethapi.NewPublicTransactionPoolAPI(apiBackend, new(ethapi.AddrLocker)),
+		eapi:  ioncapi.NewPublicIONChainAPI(apiBackend),
+		bcapi: ioncapi.NewPublicBlockChainAPI(apiBackend),
+		txapi: ioncapi.NewPublicTransactionPoolAPI(apiBackend, new(ioncapi.AddrLocker)),
 	}
 }
 
@@ -78,8 +78,8 @@ func (b *ContractBackend) PendingCallContract(ctx context.Context, msg ionchain.
 	return out, err
 }
 
-func toCallArgs(msg ionchain.CallMsg) ethapi.CallArgs {
-	args := ethapi.CallArgs{
+func toCallArgs(msg ionchain.CallMsg) ioncapi.CallArgs {
+	args := ioncapi.CallArgs{
 		To:   msg.To,
 		From: msg.From,
 		Data: msg.Data,

@@ -34,7 +34,7 @@ import (
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/core/vm"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/log"
 	//"github.com/ionchain/ionchain-core/miner"
 	"github.com/ionchain/ionchain-core/params"
@@ -356,9 +356,9 @@ func NewPrivateDebugAPI(config *params.ChainConfig, eth *IONChain) *PrivateDebug
 // BlockTraceResult is the returned value when replaying a block to check for
 // consensus results and full VM trace logs for all included transactions.
 type BlockTraceResult struct {
-	Validated  bool                  `json:"validated"`
-	StructLogs []ethapi.StructLogRes `json:"structLogs"`
-	Error      string                `json:"error"`
+	Validated  bool                   `json:"validated"`
+	StructLogs []ioncapi.StructLogRes `json:"structLogs"`
+	Error      string                 `json:"error"`
 }
 
 // TraceArgs holds extra parameters to trace functions
@@ -380,7 +380,7 @@ func (api *PrivateDebugAPI) TraceBlock(blockRlp []byte, config *vm.LogConfig) Bl
 	validated, logs, err := api.traceBlock(&block, config)
 	return BlockTraceResult{
 		Validated:  validated,
-		StructLogs: ethapi.FormatLogs(logs),
+		StructLogs: ioncapi.FormatLogs(logs),
 		Error:      formatError(err),
 	}
 }
@@ -416,7 +416,7 @@ func (api *PrivateDebugAPI) TraceBlockByNumber(blockNr rpc.BlockNumber, config *
 	validated, logs, err := api.traceBlock(block, config)
 	return BlockTraceResult{
 		Validated:  validated,
-		StructLogs: ethapi.FormatLogs(logs),
+		StructLogs: ioncapi.FormatLogs(logs),
 		Error:      formatError(err),
 	}
 }
@@ -432,7 +432,7 @@ func (api *PrivateDebugAPI) TraceBlockByHash(hash common.Hash, config *vm.LogCon
 	validated, logs, err := api.traceBlock(block, config)
 	return BlockTraceResult{
 		Validated:  validated,
-		StructLogs: ethapi.FormatLogs(logs),
+		StructLogs: ioncapi.FormatLogs(logs),
 		Error:      formatError(err),
 	}
 }
@@ -499,7 +499,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 		}
 
 		var err error
-		if tracer, err = ethapi.NewJavascriptTracer(*config.Tracer); err != nil {
+		if tracer, err = ioncapi.NewJavascriptTracer(*config.Tracer); err != nil {
 			return nil, err
 		}
 
@@ -507,7 +507,7 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 		deadlineCtx, cancel := context.WithTimeout(ctx, timeout)
 		go func() {
 			<-deadlineCtx.Done()
-			tracer.(*ethapi.JavascriptTracer).Stop(&timeoutError{})
+			tracer.(*ioncapi.JavascriptTracer).Stop(&timeoutError{})
 		}()
 		defer cancel()
 	} else if config == nil {
@@ -534,13 +534,13 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, txHash common.
 	}
 	switch tracer := tracer.(type) {
 	case *vm.StructLogger:
-		return &ethapi.ExecutionResult{
+		return &ioncapi.ExecutionResult{
 			Gas:         gas,
 			Failed:      failed,
 			ReturnValue: fmt.Sprintf("%x", ret),
-			StructLogs:  ethapi.FormatLogs(tracer.StructLogs()),
+			StructLogs:  ioncapi.FormatLogs(tracer.StructLogs()),
 		}, nil
-	case *ethapi.JavascriptTracer:
+	case *ioncapi.JavascriptTracer:
 		return tracer.GetResult()
 	default:
 		panic(fmt.Sprintf("bad tracer type %T", tracer))

@@ -14,7 +14,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
-package ethapi
+package ioncapi
 
 import (
 	"context"
@@ -49,22 +49,22 @@ const (
 
 // PublicionchainAPI provides an API to access ionchain related information.
 // It offers only methods that operate on public data that is freely available to anyone.
-type PublicEthereumAPI struct {
+type PublicIONChainAPI struct {
 	b Backend
 }
 
 // NewPublicionchainAPI creates a new ionchain protocol API.
-func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
-	return &PublicEthereumAPI{b}
+func NewPublicIONChainAPI(b Backend) *PublicIONChainAPI {
+	return &PublicIONChainAPI{b}
 }
 
 // GasPrice returns a suggestion for a gas price.
-func (s *PublicEthereumAPI) GasPrice(ctx context.Context) (*big.Int, error) {
+func (s *PublicIONChainAPI) GasPrice(ctx context.Context) (*big.Int, error) {
 	return s.b.SuggestPrice(ctx)
 }
 
 // ProtocolVersion returns the current ionchain protocol version this node supports
-func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
+func (s *PublicIONChainAPI) ProtocolVersion() hexutil.Uint {
 	return hexutil.Uint(s.b.ProtocolVersion())
 }
 
@@ -75,7 +75,7 @@ func (s *PublicEthereumAPI) ProtocolVersion() hexutil.Uint {
 // - highestBlock:  block number of the highest block header this node has received from peers
 // - pulledStates:  number of state entries processed until now
 // - knownStates:   number of known state entries that still need to be pulled
-func (s *PublicEthereumAPI) Syncing() (interface{}, error) {
+func (s *PublicIONChainAPI) Syncing() (interface{}, error) {
 	progress := s.b.Downloader().Progress()
 
 	// Return not syncing if the synchronisation already completed

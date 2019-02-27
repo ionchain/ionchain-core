@@ -39,7 +39,7 @@ import (
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/event"
-	"github.com/ionchain/ionchain-core/internal/ethapi"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/miner"
 	"github.com/ionchain/ionchain-core/node"
@@ -89,7 +89,7 @@ type IONChain struct {
 	etherbase common.Address
 
 	networkId     uint64
-	netRPCService *ethapi.PublicNetAPI
+	netRPCService *ioncapi.PublicNetAPI
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -223,7 +223,7 @@ func CreateConsensusEngine(ctx *node.ServiceContext, config *Config, chainConfig
 // APIs returns the collection of RPC services the ionchain package offers.
 // NOTE, some of these services probably need to be moved to somewhere else.
 func (s *IONChain) APIs() []rpc.API {
-	apis := ethapi.GetAPIs(s.ApiBackend)
+	apis := ioncapi.GetAPIs(s.ApiBackend)
 
 	// Append any APIs exposed explicitly by the consensus engine
 	apis = append(apis, s.engine.APIs(s.BlockChain())...)
@@ -366,7 +366,7 @@ func (s *IONChain) Start(srvr *p2p.Server) error {
 	s.startBloomHandlers()
 
 	// Start the RPC service
-	s.netRPCService = ethapi.NewPublicNetAPI(srvr, s.NetVersion())
+	s.netRPCService = ioncapi.NewPublicNetAPI(srvr, s.NetVersion())
 
 	// Figure out a max peers count based on the server limits
 	maxPeers := srvr.MaxPeers
