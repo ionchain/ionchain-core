@@ -27,7 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	ethereum "github.com/ionchain/ionchain-core"
+	ionchain "github.com/ionchain/ionchain-core"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/ioncdb"
@@ -240,7 +240,7 @@ func New(mode SyncMode, stateDb ioncdb.Database, mux *event.TypeMux, chain Block
 // In addition, during the state download phase of fast synchronisation the number
 // of processed and the total number of known states are also returned. Otherwise
 // these are zero.
-func (d *Downloader) Progress() ethereum.SyncProgress {
+func (d *Downloader) Progress() ionchain.SyncProgress {
 	// Lock the current stats and return the progress
 	d.syncStatsLock.RLock()
 	defer d.syncStatsLock.RUnlock()
@@ -254,7 +254,7 @@ func (d *Downloader) Progress() ethereum.SyncProgress {
 	case LightSync: // 轻节点同步
 		current = d.lightchain.CurrentHeader().Number.Uint64()
 	}
-	return ethereum.SyncProgress{
+	return ionchain.SyncProgress{
 		StartingBlock: d.syncStatsChainOrigin,
 		CurrentBlock:  current,
 		HighestBlock:  d.syncStatsChainHeight,

@@ -22,14 +22,14 @@ import (
 	"errors"
 	"math/big"
 
-	ethereum "github.com/ionchain/ionchain-core"
+	ionchain "github.com/ionchain/ionchain-core"
 	"github.com/ionchain/ionchain-core/common"
 )
 
 // Subscription represents an event subscription where events are
 // delivered on a data channel.
 type Subscription struct {
-	sub ethereum.Subscription
+	sub ionchain.Subscription
 }
 
 // Unsubscribe cancels the sending of events to the data channel
@@ -40,7 +40,7 @@ func (s *Subscription) Unsubscribe() {
 
 // CallMsg contains parameters for contract calls.
 type CallMsg struct {
-	msg ethereum.CallMsg
+	msg ionchain.CallMsg
 }
 
 // NewCallMsg creates an empty contract call parameter list.
@@ -75,7 +75,7 @@ func (msg *CallMsg) SetTo(address *Address) {
 // SyncProgress gives progress indications when the node is synchronising with
 // the ionchain network.
 type SyncProgress struct {
-	progress ethereum.SyncProgress
+	progress ionchain.SyncProgress
 }
 
 func (p *SyncProgress) GetStartingBlock() int64 { return int64(p.progress.StartingBlock) }
@@ -128,7 +128,7 @@ func (t *Topics) Append(topics *Hashes) {
 
 // FilterQuery contains options for contact log filtering.
 type FilterQuery struct {
-	query ethereum.FilterQuery
+	query ionchain.FilterQuery
 }
 
 // NewFilterQuery creates an empty filter query for contact log filtering.

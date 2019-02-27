@@ -20,7 +20,7 @@ package accounts
 import (
 	"math/big"
 
-	ethereum "github.com/ionchain/ionchain-core"
+	ionchain "github.com/ionchain/ionchain-core"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/event"
@@ -85,7 +85,7 @@ type Wallet interface {
 	//
 	// You can disable automatic account discovery by calling SelfDerive with a nil
 	// chain state reader.
-	SelfDerive(base DerivationPath, chain ethereum.ChainStateReader)
+	SelfDerive(base DerivationPath, chain ionchain.ChainStateReader)
 
 	// SignHash requests the wallet to sign the given hash.
 	//
