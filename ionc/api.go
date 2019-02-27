@@ -45,13 +45,13 @@ import (
 
 const defaultTraceTimeout = 5 * time.Second
 
-// PublicionchainAPI provides an API to access Ethereum full node-related
+// PublicionchainAPI provides an API to access ionchain full node-related
 // information.
 type PublicEthereumAPI struct {
 	e *IONChain
 }
 
-// NewPublicionchainAPI creates a new Ethereum protocol API for full nodes.
+// NewPublicionchainAPI creates a new ionchain protocol API for full nodes.
 func NewPublicEthereumAPI(e *IONChain) *PublicEthereumAPI {
 	return &PublicEthereumAPI{e}
 }

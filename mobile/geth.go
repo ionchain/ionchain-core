@@ -49,10 +49,10 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
-	// ionchainEnabled specifies whether the node should run the Ethereum protocol.
+	// ionchainEnabled specifies whether the node should run the ionchain protocol.
 	EthereumEnabled bool
 
-	// ionchainNetworkID is the network identifier used by the Ethereum protocol to
+	// ionchainNetworkID is the network identifier used by the ionchain protocol to
 	// decide if remote peers should be accepted or not.
 	EthereumNetworkID int64 // uint64 in truth, but Java can't handle that...
 
@@ -189,7 +189,7 @@ func (n *Node) Stop() error {
 	return n.node.Stop()
 }
 
-// GetionchainClient retrieves a client to access the Ethereum subsystem.
+// GetionchainClient retrieves a client to access the ionchain subsystem.
 func (n *Node) GetEthereumClient() (client *EthereumClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {

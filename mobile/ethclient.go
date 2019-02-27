@@ -25,7 +25,7 @@ import (
 	"github.com/ionchain/ionchain-core/ioncclient"
 )
 
-// ionchainClient provides access to the Ethereum APIs.
+// ionchainClient provides access to the ionchain APIs.
 type EthereumClient struct {
 	client *ioncclient.Client
 }

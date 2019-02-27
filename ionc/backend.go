@@ -56,7 +56,7 @@ type LesServer interface {
 	SetBloomBitsIndexer(bbIndexer *core.ChainIndexer)
 }
 
-// ionchain implements the Ethereum full node service.
+// ionchain implements the ionchain full node service.
 type IONChain struct {
 	config      *Config
 	chainConfig *params.ChainConfig

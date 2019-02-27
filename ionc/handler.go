@@ -97,7 +97,7 @@ type ProtocolManager struct {
 	wg sync.WaitGroup
 }
 
-// NewProtocolManager returns a new ionchain sub protocol manager. The Ethereum sub protocol manages peers capable
+// NewProtocolManager returns a new ionchain sub protocol manager. The ionchain sub protocol manages peers capable
 // with the ionchain network.
 func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, networkId uint64, mux *event.TypeMux, txpool txPool, engine consensus.Engine, blockchain *core.BlockChain, chaindb ioncdb.Database) (*ProtocolManager, error) {
 	// Create the protocol manager with the base fields

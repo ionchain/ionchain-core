@@ -47,13 +47,13 @@ const (
 	defaultGasPrice = 50 * params.Shannon
 )
 
-// PublicionchainAPI provides an API to access Ethereum related information.
+// PublicionchainAPI provides an API to access ionchain related information.
 // It offers only methods that operate on public data that is freely available to anyone.
 type PublicEthereumAPI struct {
 	b Backend
 }
 
-// NewPublicionchainAPI creates a new Ethereum protocol API.
+// NewPublicionchainAPI creates a new ionchain protocol API.
 func NewPublicEthereumAPI(b Backend) *PublicEthereumAPI {
 	return &PublicEthereumAPI{b}
 }

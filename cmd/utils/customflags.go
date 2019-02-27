@@ -48,7 +48,7 @@ func (self *DirectoryString) Set(value string) error {
 }
 
 // Custom cli.Flag type which expand the received string to an absolute path.
-// e.g. ~/.ionchain -> /home/username/.ethereum
+// e.g. ~/.ionchain -> /home/username/.ionchain
 type DirectoryFlag struct {
 	Name  string
 	Value DirectoryString
