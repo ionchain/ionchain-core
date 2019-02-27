@@ -27,7 +27,6 @@ import (
 
 	"github.com/ionchain/ionchain-core/accounts"
 	"github.com/ionchain/ionchain-core/accounts/keystore"
-	"github.com/ionchain/ionchain-core/accounts/usbwallet"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/crypto"
 	"github.com/ionchain/ionchain-core/log"
@@ -406,20 +405,6 @@ func makeAccountManager(conf *Config) (*accounts.Manager, string, error) {
 	// Assemble the account manager and supported backends
 	backends := []accounts.Backend{
 		keystore.NewKeyStore(keydir, scryptN, scryptP),
-	}
-	if !conf.NoUSB {
-		// Start a USB hub for Ledger hardware wallets
-		if ledgerhub, err := usbwallet.NewLedgerHub(); err != nil {
-			log.Warn(fmt.Sprintf("Failed to start Ledger hub, disabling: %v", err))
-		} else {
-			backends = append(backends, ledgerhub)
-		}
-		// Start a USB hub for Trezor hardware wallets
-		if trezorhub, err := usbwallet.NewTrezorHub(); err != nil {
-			log.Warn(fmt.Sprintf("Failed to start Trezor hub, disabling: %v", err))
-		} else {
-			backends = append(backends, trezorhub)
-		}
 	}
 	return accounts.NewManager(backends...), ephemeral, nil
 }

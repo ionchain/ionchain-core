@@ -154,7 +154,7 @@ func (c *Console) init(preload []string) error {
 	//c.jsre.Run(`var GlobalRegistrar = ionc.contract(` + registrar.GlobalRegistrarAbi + `);   registrar = GlobalRegistrar.at("` + registrar.GlobalRegistrarAddr + `");`)
 
 	// If the console is in interactive mode, instrument password related methods to query the user
-	if c.prompter != nil {
+	/*if c.prompter != nil {
 		// Retrieve the account management object to instrument
 		personal, err := c.jsre.Get("personal")
 		if err != nil {
@@ -183,7 +183,7 @@ func (c *Console) init(preload []string) error {
 			obj.Set("newAccount", bridge.NewAccount)
 			obj.Set("sign", bridge.Sign)
 		}
-	}
+	}*/
 	// The admin.sleep and admin.sleepBlocks are offered by the console and not by the RPC layer.
 	admin, err := c.jsre.Get("admin")
 	if err != nil {
