@@ -28,7 +28,7 @@ import (
 	"github.com/ionchain/ionchain-core/ionc"
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ioncclient"
-	"github.com/ionchain/ionchain-core/ethstats"
+	"github.com/ionchain/ionchain-core/ioncstats"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/p2p"
@@ -161,7 +161,7 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 				var lesServ *les.LightIONChain
 				ctx.Service(&lesServ)
 
-				return ethstats.New(config.IONChainNetStats, nil, lesServ)
+				return ioncstats.New(config.IONChainNetStats, nil, lesServ)
 			}); err != nil {
 				return nil, fmt.Errorf("netstats init: %v", err)
 			}

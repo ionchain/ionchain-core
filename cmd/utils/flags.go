@@ -41,7 +41,7 @@ import (
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ioncdb"
-	"github.com/ionchain/ionchain-core/ethstats"
+	"github.com/ionchain/ionchain-core/ioncstats"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/metrics"
@@ -346,8 +346,8 @@ var (
 	}
 	// Logging and debug settings
 	EthStatsURLFlag = cli.StringFlag{
-		Name:  "ethstats",
-		Usage: "Reporting URL of a ethstats service (nodename:secret@host:port)",
+		Name:  "ioncstats",
+		Usage: "Reporting URL of a ioncstats service (nodename:secret@host:port)",
 	}
 	MetricsEnabledFlag = cli.BoolFlag{
 		Name:  metrics.MetricsEnabledFlag,
@@ -1102,7 +1102,7 @@ func RegisterEthStatsService(stack *node.Node, url string) {
 		var lesServ *les.LightIONChain
 		ctx.Service(&lesServ)
 
-		return ethstats.New(url, ethServ, lesServ)
+		return ioncstats.New(url, ethServ, lesServ)
 	}); err != nil {
 		Fatalf("Failed to register the ionchain Stats service: %v", err)
 	}
