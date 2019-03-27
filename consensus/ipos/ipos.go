@@ -519,11 +519,8 @@ func (c *IPos) Prepare(chain consensus.ChainReader, header *types.Header) error 
 	//currentDiff = new(big.Int).Add(currentDiff, parent.Difficulty) // 不做累计难度
 
 	elapsedTime := new(big.Int).Set(header.Time).Sub(header.Time, parent.Time)
-	fmt.Printf("difficult elapse Time %d \n", elapsedTime)
 	preBase_elapsedTime := new(big.Int).Mul(parent.BaseTarget, elapsedTime)
-	fmt.Printf("difficult preBase_elapsedTime %d \n", preBase_elapsedTime)
 	currentDiff := new(big.Int).Div(DIFFICULTY_MULTIPLIER, preBase_elapsedTime)
-	fmt.Printf("diff_elapsedTime %d,diff_preBase_elapsedTime %d, difficult current %d \n", elapsedTime, preBase_elapsedTime, currentDiff)
 
 	if currentDiff.Cmp(big.NewInt(0)) == 0 {
 		header.Difficulty = big.NewInt(1)
@@ -575,7 +572,6 @@ func (c *IPos) getHitTime(chain consensus.ChainReader, header *types.Header) *bi
 	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
 	effectiveBalance, err := c.effectiveBalance(chain, header)
-	fmt.Printf("effectiveBalance %d \n", effectiveBalance)
 	if effectiveBalance.Cmp(big.NewInt(0)) == 0 || err != nil {
 		return math.MaxBig63
 	}
@@ -583,9 +579,7 @@ func (c *IPos) getHitTime(chain consensus.ChainReader, header *types.Header) *bi
 
 	effective := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
 	effective = new(big.Int).Set(hit).Div(hit, effective)
-	fmt.Printf("hit/effectiveBaseTarget %d \n", effective)
 	hitTime := new(big.Int).Set(parentHeader.Time).Add(parentHeader.Time, effective)
-	fmt.Printf("pTime %d,calc hitTime %d \n", parentHeader.Time, hitTime)
 	return hitTime
 }
 
@@ -669,7 +663,6 @@ func (c *IPos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan
 	hitTime := c.getHitTime(chain, header)
 	time_diff := new(big.Int).Set(header.Time).Sub(header.Time, hitTime)
 
-	fmt.Printf("headerTime %d,time_diff %d \n", header.Time, time_diff)
 
 	if time_diff.Cmp(big.NewInt(-15)) < 0 /*|| !c.verifyHit(chain, header)*/ {
 		//sleepTime := new(big.Int).Set(header.Time).Sub(header.Time, hitTime).Int64()
