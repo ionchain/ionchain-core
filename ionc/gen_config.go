@@ -27,19 +27,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		MinerThreads            int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes  `toml:",omitempty"`
 		GasPrice                *big.Int
-		EthashCacheDir          string
-		EthashCachesInMem       int
-		EthashCachesOnDisk      int
-		EthashDatasetDir        string
-		EthashDatasetsInMem     int
-		EthashDatasetsOnDisk    int
+
 		TxPool                  core.TxPoolConfig
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
 		DocRoot                 string `toml:"-"`
-		PowFake                 bool   `toml:"-"`
-		PowTest                 bool   `toml:"-"`
-		PowShared               bool   `toml:"-"`
+
 	}
 	var enc Config
 	enc.Genesis = c.Genesis
@@ -54,19 +47,12 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.MinerThreads = c.MinerThreads
 	enc.ExtraData = c.ExtraData
 	enc.GasPrice = c.GasPrice
-	enc.EthashCacheDir = c.EthashCacheDir
-	enc.EthashCachesInMem = c.EthashCachesInMem
-	enc.EthashCachesOnDisk = c.EthashCachesOnDisk
-	enc.EthashDatasetDir = c.EthashDatasetDir
-	enc.EthashDatasetsInMem = c.EthashDatasetsInMem
-	enc.EthashDatasetsOnDisk = c.EthashDatasetsOnDisk
+
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
 	enc.DocRoot = c.DocRoot
-	enc.PowFake = c.PowFake
-	enc.PowTest = c.PowTest
-	enc.PowShared = c.PowShared
+
 	return &enc, nil
 }
 
@@ -85,19 +71,12 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		MinerThreads            *int            `toml:",omitempty"`
 		ExtraData               hexutil.Bytes   `toml:",omitempty"`
 		GasPrice                *big.Int
-		EthashCacheDir          *string
-		EthashCachesInMem       *int
-		EthashCachesOnDisk      *int
-		EthashDatasetDir        *string
-		EthashDatasetsInMem     *int
-		EthashDatasetsOnDisk    *int
+
 		TxPool                  *core.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
 		DocRoot                 *string `toml:"-"`
-		PowFake                 *bool   `toml:"-"`
-		PowTest                 *bool   `toml:"-"`
-		PowShared               *bool   `toml:"-"`
+
 	}
 	var dec Config
 	if err := unmarshal(&dec); err != nil {
@@ -139,24 +118,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.GasPrice != nil {
 		c.GasPrice = dec.GasPrice
 	}
-	if dec.EthashCacheDir != nil {
-		c.EthashCacheDir = *dec.EthashCacheDir
-	}
-	if dec.EthashCachesInMem != nil {
-		c.EthashCachesInMem = *dec.EthashCachesInMem
-	}
-	if dec.EthashCachesOnDisk != nil {
-		c.EthashCachesOnDisk = *dec.EthashCachesOnDisk
-	}
-	if dec.EthashDatasetDir != nil {
-		c.EthashDatasetDir = *dec.EthashDatasetDir
-	}
-	if dec.EthashDatasetsInMem != nil {
-		c.EthashDatasetsInMem = *dec.EthashDatasetsInMem
-	}
-	if dec.EthashDatasetsOnDisk != nil {
-		c.EthashDatasetsOnDisk = *dec.EthashDatasetsOnDisk
-	}
+
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
 	}
@@ -169,14 +131,6 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.DocRoot != nil {
 		c.DocRoot = *dec.DocRoot
 	}
-	if dec.PowFake != nil {
-		c.PowFake = *dec.PowFake
-	}
-	if dec.PowTest != nil {
-		c.PowTest = *dec.PowTest
-	}
-	if dec.PowShared != nil {
-		c.PowShared = *dec.PowShared
-	}
+
 	return nil
 }

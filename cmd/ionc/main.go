@@ -49,7 +49,7 @@ var (
 	// ionchain address of the ionc release oracle.
 	relOracle = common.HexToAddress("0xfa7b9770ca4cb04296cac84f37736d4041251cdf")
 	// The app that holds all commands and flags.
-	app = utils.NewApp(gitCommit, "the go-ionchain command line interface")
+	app = utils.NewApp(gitCommit, "the ionchain-core command line interface")
 	// flags that configure the node
 	nodeFlags = []cli.Flag{
 		utils.IdentityFlag,
@@ -66,12 +66,7 @@ var (
 		utils.DashboardPortFlag,
 		utils.DashboardRefreshFlag,
 		utils.DashboardAssetsFlag,
-		utils.EthashCacheDirFlag,
-		utils.EthashCachesInMemoryFlag,
-		utils.EthashCachesOnDiskFlag,
-		utils.EthashDatasetDirFlag,
-		utils.EthashDatasetsInMemoryFlag,
-		utils.EthashDatasetsOnDiskFlag,
+
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
 		utils.TxPoolRejournalFlag,
@@ -146,7 +141,7 @@ func init() {
 	// Initialize the CLI app and start ionc
 	app.Action = gionc
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2017 The go-ionchain Authors"
+	app.Copyright = "Copyright 2018-2019 The ionchain-core Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,

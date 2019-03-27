@@ -20,9 +20,6 @@ import (
 	"math/big"
 	"os"
 	"os/user"
-	"path/filepath"
-	"runtime"
-
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
 	"github.com/ionchain/ionchain-core/core"
@@ -33,16 +30,11 @@ import (
 
 // DefaultConfig contains default settings for use on the ionchain main net.
 var DefaultConfig = Config{
-	SyncMode:             downloader.FastSync,
-	EthashCacheDir:       "ethash",
-	EthashCachesInMem:    2,
-	EthashCachesOnDisk:   3,
-	EthashDatasetsInMem:  1,
-	EthashDatasetsOnDisk: 2,
-	NetworkId:            1,
-	LightPeers:           20,
-	DatabaseCache:        128,
-	GasPrice:             big.NewInt(18 * params.Shannon),
+	SyncMode: downloader.FastSync,
+	NetworkId:     1,
+	LightPeers:    20,
+	DatabaseCache: 128,
+	GasPrice:      big.NewInt(18 * params.Shannon),
 
 	TxPool: core.DefaultTxPoolConfig,
 	GPO: gasprice.Config{
@@ -58,11 +50,7 @@ func init() {
 			home = user.HomeDir
 		}
 	}
-	if runtime.GOOS == "windows" {
-		DefaultConfig.EthashDatasetDir = filepath.Join(home, "AppData", "Ethash")
-	} else {
-		DefaultConfig.EthashDatasetDir = filepath.Join(home, ".ethash")
-	}
+
 }
 
 //go:generate gencodec -type Config -field-override configMarshaling -formats toml -out gen_config.go
@@ -91,13 +79,6 @@ type Config struct {
 	ExtraData    []byte         `toml:",omitempty"`
 	GasPrice     *big.Int
 
-	// Ethash options
-	EthashCacheDir       string
-	EthashCachesInMem    int
-	EthashCachesOnDisk   int
-	EthashDatasetDir     string
-	EthashDatasetsInMem  int
-	EthashDatasetsOnDisk int
 
 	// Transaction pool options
 	TxPool core.TxPoolConfig
@@ -109,10 +90,8 @@ type Config struct {
 	EnablePreimageRecording bool
 
 	// Miscellaneous options
-	DocRoot   string `toml:"-"`
-	PowFake   bool   `toml:"-"`
-	PowTest   bool   `toml:"-"`
-	PowShared bool   `toml:"-"`
+	DocRoot string `toml:"-"`
+
 }
 
 type configMarshaling struct {
