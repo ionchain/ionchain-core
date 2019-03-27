@@ -155,21 +155,10 @@ $ ionc --datadir=path/to/custom/data/folder --bootnodes=<bootnode-enode-url-from
 
 #### 运行私有链miner
 
-Mining on the public Ethereum network is a complex task as it's only feasible using GPUs, requiring
-an OpenCL or CUDA enabled `ethminer` instance. For information on such a setup, please consult the
-[EtherMining subreddit](https://www.reddit.com/r/EtherMining/) and the [Genoil miner](https://github.com/Genoil/cpp-ethereum)
-repository.
-
-In a private network setting, however a single CPU miner instance is more than enough for practical
-purposes as it can produce a stable stream of blocks at the correct intervals without needing heavy
-resources (consider running on a single thread, no need for multiple ones either). To start a Geth
-instance for mining, run it with all your usual flags, extended by:
+在`ionc`网络中miner的算力是通过在保证金合约的保证金数量决定的，启动一个实例用于挖矿：
 
 ```
-$ ionc <usual-flags> --mine --minerthreads=1 --etherbase=0x0000000000000000000000000000000000000000
+$ ionc <usual-flags> --mine --etherbase=0x0000000000000000000000000000000000000000
 ```
 
-Which will start mining blocks and transactions on a single CPU thread, crediting all proceedings to
-the account specified by `--etherbase`. You can further tune the mining by changing the default gas
-limit blocks converge to (`--targetgaslimit`) and the price transactions are accepted at (`--gasprice`).
-
+其中`—etherbase`设置为miner的账号地址，miner可以通过`--targetgaslimit`调整区块的`gas limit`，`--gasprice`设置接受交易的`gas price`
