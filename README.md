@@ -84,15 +84,12 @@ docker run -d --name ionchain-node -v /Users/alice/ionchain:/root \
 
 ### 创建一个私有链
 
+创建一个自己的私有链会有一点复杂，因为你需要手动修改很多官方创建文件的配置。
 
-
-Maintaining your own private network is more involved as a lot of configurations taken for granted in
-the official networks need to be manually set up.
 
 #### 定义私有链创世块
 
-First, you'll need to create the genesis state of your networks, which all nodes need to be aware of
-and agree upon. This consists of a small JSON file (e.g. call it `genesis.json`):
+首先，为你的私有网络创建一个创始状态，这个创始状态需要你的私有网络中的所有节点都知晓，并达成共识。`genesis.json`以JSON格式组成：
 
 ```json
 {
@@ -124,24 +121,19 @@ and agree upon. This consists of a small JSON file (e.g. call it `genesis.json`)
 		}
 ```
 
-The above fields should be fine for most purposes, although we'd recommend changing the `nonce` to
-some random value so you prevent unknown remote nodes from being able to connect to you. If you'd
-like to pre-fund some accounts for easier testing, you can populate the `alloc` field with account
-configs:
-
+以上关于保证金合约是如何创建、编译的将在另外一个项目中做详细说明，我们建议你修改`nonce`值为一个随机数，这样可以防止未知的远程节点连接到你的网络中。如果你需要给某些账户预设一些资金，可以使用修改`alloc`值：
 ```json
 "alloc": {
   "0x0000000000000000000000000000000000000001": {"balance": "111111111"},
   "0x0000000000000000000000000000000000000002": {"balance": "222222222"}
 }
 ```
-
-With the genesis state defined in the above JSON file, you'll need to initialize **every** Geth node
-with it prior to starting it up to ensure all blockchain parameters are correctly set:
+当`genesis.json`文件创建完成时，你需要在所有的`ionc`节点执行初始化操作。
 
 ```
 $ ionc init path/to/genesis.json
 ```
+
 
 #### 创建bootnode节点
 
