@@ -30,15 +30,15 @@ import (
 
 // Constants to match up protocol versions and messages
 const (
-	eth62 = 62
-	eth63 = 63
+	ionc62 = 62
+	ionc63 = 63
 )
 
 // Official short name of the protocol used during capability negotiation.
 var ProtocolName = "ionc"
 
 // Supported versions of the ionc protocol (first is primary).
-var ProtocolVersions = []uint{eth63, eth62}
+var ProtocolVersions = []uint{ionc63, ionc62}
 
 // Number of implemented message corresponding to different protocol versions.
 var ProtocolLengths = []uint64{17, 8}
