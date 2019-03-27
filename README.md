@@ -134,38 +134,24 @@ docker run -d --name ionchain-node -v /Users/alice/ionchain:/root \
 $ ionc init path/to/genesis.json
 ```
 
-
 #### 创建bootnode节点
 
-With all nodes that you want to run initialized to the desired genesis state, you'll need to start a
-bootstrap node that others can use to find each other in your network and/or over the internet. The
-clean way is to configure and run a dedicated bootnode:
+当所有的节点都完成初始化时，你需要启动一个`bootstrap`节点，通过`bootstrap`节点可以帮助其他的节点之间进行相互发现，这样他们就可以通过网络连接在一起。
 
 ```
 $ bootnode --genkey=boot.key
 $ bootnode --nodekey=boot.key
 ```
 
-With the bootnode online, it will display an [`enode` URL](https://github.com/ethereum/wiki/wiki/enode-url-format)
-that other nodes can use to connect to it and exchange peer information. Make sure to replace the
-displayed IP address information (most probably `[::]`) with your externally accessible IP to get the
-actual `enode` URL.
-
-*Note: You could also use a full-fledged Geth node as a bootnode, but it's the less recommended way.*
-
 #### 启动节点
 
-With the bootnode operational and externally reachable (you can try `telnet <ip> <port>` to ensure
-it's indeed reachable), start every subsequent Geth node pointed to the bootnode for peer discovery
-via the `--bootnodes` flag. It will probably also be desirable to keep the data directory of your
-private network separated, so do also specify a custom `--datadir` flag.
+`bootnode`启动后，通过`telnet <ip> <port>`命令测试一下是否可以从外部访问`bootnode`，现在启动所有的`ionc`节点，在启动时加上`--bootnodes`选项。同时为了保存你的私有链上的数据，你需要创建一个`datadir`目录，并通过`--datadir`选项设置。
 
 ```
 $ ionc --datadir=path/to/custom/data/folder --bootnodes=<bootnode-enode-url-from-above>
 ```
 
-*Note: Since your network will be completely cut off from the main and test networks, you'll also
-need to configure a miner to process transactions and create new blocks for you.*
+*注意：从现在开始你的节点已经完全从主链网络上断开，现在你可以配置miner来处理交易，并创建新的区块*
 
 #### 运行私有链miner
 
