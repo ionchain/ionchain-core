@@ -54,44 +54,37 @@ docker run -d --name ionchain-node -v /Users/alice/ionchain:/root \
 
 `docker`会在`/Users/alice/ionchain`本地目录中映射一个持久的`volume`用来存储区块，同时也会映射默认端口。如果你想从其他容器或主机通过`RPC`方式访问运行的节点，需要加上`--rpcaddr 0.0.0.0`参数。默认情况下，`ionc`绑定的本地接口与`RPC`端点是不能从外部访问的。
 
-### Programmatically interfacing Geth nodes
+### 以编程的方式与`IONC`节点交互
 
-As a developer, sooner rather than later you'll want to start interacting with Geth and the Ethereum
-network via your own programs and not manually through the console. To aid this, Geth has built-in
-support for a JSON-RPC based APIs ([standard APIs](https://github.com/ethereum/wiki/wiki/JSON-RPC) and
-[Geth specific APIs](https://github.com/ethereum/go-ethereum/wiki/Management-APIs)). These can be
-exposed via HTTP, WebSockets and IPC (UNIX sockets on UNIX based platforms, and named pipes on Windows).
+作为一个开发人员想通过自己的程序与`ionchain`网络进行交互，而不是通过`JavaScript console`的方式，为了满足这种需求，`ionc`有一个内置`JSON-RPC API`，这些API通过`HTTP`、`WebSockets`和`IPC`方式暴露出去。其中`IPC`端口是默认开启的，`HTTP`和`WS`端口需要手动开启，同时为了安全方面的考虑，这两个端口只会暴露部分API。
 
-The IPC interface is enabled by default and exposes all the APIs supported by Geth, whereas the HTTP
-and WS interfaces need to manually be enabled and only expose a subset of APIs due to security reasons.
-These can be turned on/off and configured as you'd expect.
+基于HTTP的JSON-RPC API 选项：
 
-HTTP based JSON-RPC API options:
+  * `--rpc` 开启 HTTP-RPC 服务
+  * `--rpcaddr` HTTP-RPC 服务监听地址 (默认: "localhost")
+  * `--rpcport` HTTP-RPC 服务监听端口 (默认: 8545)
+  * `--rpcapi` 通过HTTP暴露出可用的API
+  * `--rpccorsdomain` 逗号分隔的一系列域，通过这些域接收跨域请求
 
-  * `--rpc` Enable the HTTP-RPC server
-  * `--rpcaddr` HTTP-RPC server listening interface (default: "localhost")
-  * `--rpcport` HTTP-RPC server listening port (default: 8545)
-  * `--rpcapi` API's offered over the HTTP-RPC interface (default: "eth,net,web3")
-  * `--rpccorsdomain` Comma separated list of domains from which to accept cross origin requests (browser enforced)
-  * `--ws` Enable the WS-RPC server
-  * `--wsaddr` WS-RPC server listening interface (default: "localhost")
-  * `--wsport` WS-RPC server listening port (default: 8546)
-  * `--wsapi` API's offered over the WS-RPC interface (default: "eth,net,web3")
-  * `--wsorigins` Origins from which to accept websockets requests
-  * `--ipcdisable` Disable the IPC-RPC server
-  * `--ipcapi` API's offered over the IPC-RPC interface (default: "admin,debug,eth,miner,net,personal,shh,txpool,web3")
-  * `--ipcpath` Filename for IPC socket/pipe within the datadir (explicit paths escape it)
+基于WebSocket的 JSON-RPC API选项:
 
-You'll need to use your own programming environments' capabilities (libraries, tools, etc) to connect
-via HTTP, WS or IPC to a Geth node configured with the above flags and you'll need to speak [JSON-RPC](https://www.jsonrpc.org/specification)
-on all transports. You can reuse the same connection for multiple requests!
 
-**Note: Please understand the security implications of opening up an HTTP/WS based transport before
-doing so! Hackers on the internet are actively trying to subvert Ethereum nodes with exposed APIs!
-Further, all browser tabs can access locally running web servers, so malicious web pages could try to
-subvert locally available APIs!**
+  * `--ws` 开启 WS-RPC 服务
+  * `--wsaddr` WS-RPC 服务监听地址(默认: "localhost")
+  * `--wsport` WS-RPC 服务监听端口 (默认: 8546)
+  * `--wsapi` 通过WS-PRC暴露出可用的API
+
+基于IPC的JSON-RPC AP选项
+
+
+  * `--ipcdisable` 禁用 IPC-RPC 服务
+  * `--ipcapi` 通过IPC-PRC暴露出可用的API
+
+**注意：在使用http/ws接口之前，你需要了解相关的安全知识，在公网上，黑客会利用节点在公网上暴露的接口进行破坏式的攻击**
 
 ### 创建一个私有链
+
+
 
 Maintaining your own private network is more involved as a lot of configurations taken for granted in
 the official networks need to be manually set up.
