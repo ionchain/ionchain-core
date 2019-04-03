@@ -3,6 +3,8 @@
 
 本项目是ionchain协议golang版本的实现
 
+在这篇博客中[IPOS共识算法设计](http://gcc2ge.github.io/2019/04/02/IPOS共识算法设计/)，详细说明了ionchain的共识算法的设计详情。
+
 
 ## 源码编译
 
