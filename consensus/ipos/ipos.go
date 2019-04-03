@@ -39,7 +39,7 @@ const TARGET = BLOCK_TIME * MAX_BALANCE_IONC
 
 var (
 	INITIAL_BASE_TARGET int64 = new(big.Int).Div(math.MaxBig63, big.NewInt(TARGET)).Int64()
-	MAX_BASE_TARGET     int64 = INITIAL_BASE_TARGET * 50 // main 50  ,test MAX_BALANCE_IONC
+	MAX_BASE_TARGET     int64 = INITIAL_BASE_TARGET * MAX_BALANCE_IONC // main 50  ,test MAX_BALANCE_IONC
 	MIN_BASE_TARGET     int64 = INITIAL_BASE_TARGET * 9 / 10
 	BASE_TARGET_GAMMA   int64 = 64
 
@@ -413,13 +413,13 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainReader, header *types.Head
 			//baseTarget = prevBaseTarget - prevBaseTarget*BASE_TARGET_GAMMA*(BLOCK_TIME-Max(blocktimeAverage, MIN_BLOCKTIME_LIMIT))/(100*BLOCK_TIME);
 		}
 		// 暂时注释
-		//if baseTarget.Cmp(big.NewInt(0)) < 0 || baseTarget.Cmp(big.NewInt(MAX_BASE_TARGET)) > 0 {
-		//	baseTarget = big.NewInt(MAX_BASE_TARGET);
-		//}
+		if baseTarget.Cmp(big.NewInt(0)) < 0 || baseTarget.Cmp(big.NewInt(MAX_BASE_TARGET)) > 0 {
+			baseTarget = big.NewInt(MAX_BASE_TARGET);
+		}
 		// 暂时注释
-		//if baseTarget.Cmp(big.NewInt(MIN_BASE_TARGET)) < 0 {
-		//	baseTarget = big.NewInt(MIN_BASE_TARGET);
-		//}
+		if baseTarget.Cmp(big.NewInt(MIN_BASE_TARGET)) < 0 {
+			baseTarget = big.NewInt(MIN_BASE_TARGET);
+		}
 	} else {
 		baseTarget = prevBaseTarget;
 	}
