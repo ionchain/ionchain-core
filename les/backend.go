@@ -180,17 +180,17 @@ func (s *LightDummyAPI) Mining() bool {
 func (s *LightIONChain) APIs() []rpc.API {
 	return append(ioncapi.GetAPIs(s.ApiBackend), []rpc.API{
 		{
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   &LightDummyAPI{},
 			Public:    true,
 		}, {
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
 		}, {
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, true),
 			Public:    true,

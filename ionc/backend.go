@@ -231,17 +231,17 @@ func (s *IONChain) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicIONChainAPI(s),
 			Public:    true,
 		}, /*{
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   NewPublicMinerAPI(s),
 			Public:    true,
 		},*/ {
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   downloader.NewPublicDownloaderAPI(s.protocolManager.downloader, s.eventMux),
 			Public:    true,
@@ -251,7 +251,7 @@ func (s *IONChain) APIs() []rpc.API {
 			Service:   NewPrivateMinerAPI(s),
 			Public:    false,
 		}, {
-			Namespace: "ionc",
+			Namespace: "eth",
 			Version:   "1.0",
 			Service:   filters.NewPublicFilterAPI(s.ApiBackend, false),
 			Public:    true,
