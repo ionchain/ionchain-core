@@ -301,6 +301,11 @@ func (n *Node) startInProc(apis []rpc.API) error {
 	// Register all the APIs exposed by the services
 	handler := rpc.NewServer()
 	for _, api := range apis {
+		if api.Namespace == "eth"{
+			if err := handler.RegisterName("ionc", api.Service); err != nil {
+				return err
+			}
+		}
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
 		}
@@ -327,6 +332,11 @@ func (n *Node) startIPC(apis []rpc.API) error {
 	// Register all the APIs exposed by the services
 	handler := rpc.NewServer()
 	for _, api := range apis {
+		if api.Namespace == "eth"{
+			if err := handler.RegisterName("ionc", api.Service); err != nil {
+				return err
+			}
+		}
 		if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 			return err
 		}
@@ -396,6 +406,11 @@ func (n *Node) startHTTP(endpoint string, apis []rpc.API, modules []string, cors
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
+			if api.Namespace == "eth"{
+				if err := handler.RegisterName("ionc", api.Service); err != nil {
+					return err
+				}
+			}
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
@@ -450,6 +465,11 @@ func (n *Node) startWS(endpoint string, apis []rpc.API, modules []string, wsOrig
 	handler := rpc.NewServer()
 	for _, api := range apis {
 		if exposeAll || whitelist[api.Namespace] || (len(whitelist) == 0 && api.Public) {
+			if api.Namespace == "eth"{
+				if err := handler.RegisterName("ionc", api.Service); err != nil {
+					return err
+				}
+			}
 			if err := handler.RegisterName(api.Namespace, api.Service); err != nil {
 				return err
 			}
