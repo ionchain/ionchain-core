@@ -48,7 +48,7 @@ var (
 
 // IONC proof-of-stake protocol constants.
 var (
-	maxUncles                     = 2                 // Maximum number of uncles allowed in a single block 最多可引用叔父区块数目
+	maxUncles = 2 // Maximum number of uncles allowed in a single block 最多可引用叔父区块数目
 
 )
 
@@ -387,10 +387,10 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainReader, header *types.Head
 		blocktimeAverage := (header.Time.Int64() - prev_2.Time.Int64()) / 3
 		if blocktimeAverage > BLOCK_TIME { // 出块速度变慢 ，将baseTarget调大使保证金小的人也可以出块
 			// 出块时间最大 MAX_BLOCKTIME_LIMIT
-			if parent.UncleHash == types.EmptyUncleHash{
+			if parent.UncleHash == types.EmptyUncleHash {
 				min = blocktimeAverage
 
-			}else{
+			} else {
 				min = Min(blocktimeAverage, MAX_BLOCKTIME_LIMIT)
 			}
 			baseTarget = new(big.Int).Set(prevBaseTarget).Mul(prevBaseTarget, big.NewInt(min))
@@ -399,16 +399,16 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainReader, header *types.Head
 		} else { // 出块速度变快 将baseTarget 调小使保证金大的人可以出块
 			// 出块时间最小 MIN_BLOCKTIME_LIMIT
 			// 时间间隔/Block_time * GAMMA/100
-			if parent.UncleHash == types.EmptyUncleHash{
+			if parent.UncleHash == types.EmptyUncleHash {
 				max = BLOCK_TIME - blocktimeAverage
-			}else{
+			} else {
 				max = BLOCK_TIME - Max(blocktimeAverage, MIN_BLOCKTIME_LIMIT)
 			}
 
 			//fmt.Printf("max......... %d \n",max)
-			baseTarget = new(big.Int).Set(prevBaseTarget).Mul(prevBaseTarget,big.NewInt(max))
-			baseTarget = baseTarget.Mul(baseTarget,big.NewInt(BASE_TARGET_GAMMA))
-			baseTarget = baseTarget.Div(baseTarget,big.NewInt(100 * BLOCK_TIME))
+			baseTarget = new(big.Int).Set(prevBaseTarget).Mul(prevBaseTarget, big.NewInt(max))
+			baseTarget = baseTarget.Mul(baseTarget, big.NewInt(BASE_TARGET_GAMMA))
+			baseTarget = baseTarget.Div(baseTarget, big.NewInt(100*BLOCK_TIME))
 			baseTarget = new(big.Int).Set(prevBaseTarget).Sub(prevBaseTarget, baseTarget)
 			//baseTarget = prevBaseTarget - prevBaseTarget*BASE_TARGET_GAMMA*(BLOCK_TIME-Max(blocktimeAverage, MIN_BLOCKTIME_LIMIT))/(100*BLOCK_TIME);
 		}
@@ -579,8 +579,8 @@ func (c *IPos) getHitTime(chain consensus.ChainReader, header *types.Header) *bi
 	hit := c.getHit(chain, header)
 
 	effective := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
-	effective = new(big.Int).Set(hit).Div(hit, effective)
-	hitTime := new(big.Int).Set(parentHeader.Time).Add(parentHeader.Time, effective)
+	elapseTime := new(big.Int).Set(hit).Div(hit, effective)
+	hitTime := new(big.Int).Set(parentHeader.Time).Add(parentHeader.Time, elapseTime)
 	return hitTime
 }
 
@@ -599,14 +599,8 @@ func (c *IPos) verifyHit(chain consensus.ChainReader, header *types.Header) bool
 
 	elapsedTime := new(big.Int).Set(header.Time).Sub(header.Time, parentHeader.Time)
 
-	prevTarget := new(big.Int).Set(effectiveBaseTarget).Mul(effectiveBaseTarget, elapsedTime)
-	target := new(big.Int).Set(prevTarget).Add(prevTarget, effectiveBaseTarget)
-
-	timeOut := new(big.Int).SetInt64(3600) // 1h
-
-	//fmt.Printf("hit %d,prevTarget %d,target %d,elapsedTime %d,hit.Cmp(target) %d,hit.Cmp(prevTarget) %d ", hit, prevTarget, target, elapsedTime, hit.Cmp(target), hit.Cmp(prevTarget))
-	fmt.Printf("prevTarget %v,hit.Cmp(target) %d,hit.Cmp(prevTarget) %d ,diff %d \n", prevTarget, hit.Cmp(target), hit.Cmp(prevTarget), new(big.Int).Set(hit).Sub(hit, prevTarget))
-	fmt.Printf("hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0) %b \n", hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0))
+	target := new(big.Int).Set(effectiveBaseTarget).Mul(effectiveBaseTarget, elapsedTime)
+	//target := new(big.Int).Set(prevTarget).Add(prevTarget, effectiveBaseTarget)
 
 	// 暂时注释
 	//return hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0)
@@ -661,21 +655,13 @@ func (c *IPos) Seal(chain consensus.ChainReader, block *types.Block, stop <-chan
 
 	// 判断出块权
 	var timeOut <-chan time.Time
+
+	headerTime := time.Unix(header.Time.Int64(), 0)
 	hitTime := c.getHitTime(chain, header)
-	time_diff := new(big.Int).Set(header.Time).Sub(header.Time, hitTime)
+	hTime := time.Unix(hitTime.Int64(), 0)
 
+	timeOut = time.After(hTime.Sub(headerTime))
 
-	if time_diff.Cmp(big.NewInt(-15)) < 0 /*|| !c.verifyHit(chain, header)*/ {
-		//sleepTime := new(big.Int).Set(header.Time).Sub(header.Time, hitTime).Int64()
-		//if sleepTime > 15 { // 最大延迟
-		//	sleepTime = 15
-		//}
-		//time.Sleep(time.Duration(sleepTime))
-
-		timeOut = time.After(14 * time.Second)
-	} else {
-		timeOut = time.After(0)
-	}
 Loop:
 	for {
 		select {
