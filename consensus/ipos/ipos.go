@@ -29,8 +29,8 @@ import (
 )*/
 const (
 	BLOCK_TIME          int64 = 15;
-	MAX_BLOCKTIME_LIMIT int64 = BLOCK_TIME + 7
-	MIN_BLOCKTIME_LIMIT int64 = BLOCK_TIME - 7
+	MAX_BLOCKTIME_LIMIT int64 = BLOCK_TIME + 2
+	MIN_BLOCKTIME_LIMIT int64 = BLOCK_TIME - 2
 )
 
 const MAX_BALANCE_IONC int64 = 800000000 // IONC 8亿
@@ -387,23 +387,23 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainReader, header *types.Head
 		blocktimeAverage := (header.Time.Int64() - prev_2.Time.Int64()) / 3
 		if blocktimeAverage > BLOCK_TIME { // 出块速度变慢 ，将baseTarget调大使保证金小的人也可以出块
 			// 出块时间最大 MAX_BLOCKTIME_LIMIT
-			if parent.UncleHash == types.EmptyUncleHash {
-				min = blocktimeAverage
-
-			} else {
-				min = Min(blocktimeAverage, MAX_BLOCKTIME_LIMIT)
-			}
+			//if parent.UncleHash == types.EmptyUncleHash {
+			//	min = blocktimeAverage
+			//
+			//} else {
+			min = Min(blocktimeAverage, MAX_BLOCKTIME_LIMIT)
+			//}
 			baseTarget = new(big.Int).Set(prevBaseTarget).Mul(prevBaseTarget, big.NewInt(min))
 			baseTarget = baseTarget.Div(baseTarget, big.NewInt(BLOCK_TIME))
 			//baseTarget = (prevBaseTarget * Min(blocktimeAverage, MAX_BLOCKTIME_LIMIT)) / BLOCK_TIME;
 		} else { // 出块速度变快 将baseTarget 调小使保证金大的人可以出块
 			// 出块时间最小 MIN_BLOCKTIME_LIMIT
 			// 时间间隔/Block_time * GAMMA/100
-			if parent.UncleHash == types.EmptyUncleHash {
-				max = BLOCK_TIME - blocktimeAverage
-			} else {
-				max = BLOCK_TIME - Max(blocktimeAverage, MIN_BLOCKTIME_LIMIT)
-			}
+			//if parent.UncleHash == types.EmptyUncleHash {
+			//	max = BLOCK_TIME - blocktimeAverage
+			//} else {
+			max = BLOCK_TIME - Max(blocktimeAverage, MIN_BLOCKTIME_LIMIT)
+			//}
 
 			//fmt.Printf("max......... %d \n",max)
 			baseTarget = new(big.Int).Set(prevBaseTarget).Mul(prevBaseTarget, big.NewInt(max))
@@ -578,8 +578,8 @@ func (c *IPos) getHitTime(chain consensus.ChainReader, header *types.Header) *bi
 	}
 	hit := c.getHit(chain, header)
 
-	effective := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
-	elapseTime := new(big.Int).Set(hit).Div(hit, effective)
+	effectiveBaseTarget := new(big.Int).Set(parentHeader.BaseTarget).Mul(parentHeader.BaseTarget, effectiveBalance)
+	elapseTime := new(big.Int).Set(hit).Div(hit, effectiveBaseTarget)
 	hitTime := new(big.Int).Set(parentHeader.Time).Add(parentHeader.Time, elapseTime)
 	return hitTime
 }

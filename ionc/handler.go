@@ -103,10 +103,10 @@ func NewProtocolManager(config *params.ChainConfig, mode downloader.SyncMode, ne
 	// Create the protocol manager with the base fields
 	manager := &ProtocolManager{
 		networkId:   networkId,
-		eventMux:    mux, // 事件管理器
-		txpool:      txpool, //交易池
+		eventMux:    mux,        // 事件管理器
+		txpool:      txpool,     //交易池
 		blockchain:  blockchain, // 主链
-		chaindb:     chaindb, // 区块存储
+		chaindb:     chaindb,    // 区块存储
 		chainconfig: config,
 		peers:       newPeerSet(),
 		newPeerCh:   make(chan *peer),
@@ -335,8 +335,8 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		// Status messages在handshake后不应该再到达这里
 		return errResp(ErrExtraStatusMsg, "uncontrolled status message")
 
-	// Block header query, collect the requested headers and reply
-	// 区块头查询
+		// Block header query, collect the requested headers and reply
+		// 区块头查询
 	case msg.Code == GetBlockHeadersMsg:
 		// Decode the complex header query
 		var query getBlockHeadersData
@@ -628,8 +628,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			pm.fetcher.Notify(p.id, block.Hash, block.Number, time.Now(), p.RequestOneHeader, p.RequestBodies)
 		}
 
-
-	//发现新区块的消息
+		//发现新区块的消息
 	case msg.Code == NewBlockMsg:
 		// Retrieve and decode the propagated block
 		var request newBlockData
@@ -640,7 +639,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 		request.Block.ReceivedFrom = p
 
 		// Mark the peer as owning the block and schedule it for import
-		p.MarkBlock(request.Block.Hash()) // 标记远程节点p已经拥有这个区块
+		p.MarkBlock(request.Block.Hash())       // 标记远程节点p已经拥有这个区块
 		pm.fetcher.Enqueue(p.id, request.Block) // 导入操作
 
 		// Assuming the block is importable by the peer, but possibly not yet done so,
@@ -663,7 +662,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 		}
 
-	// 接受发送交易的通信协议
+		// 接受发送交易的通信协议
 	case msg.Code == TxMsg:
 		// Transactions arrived, make sure we have a valid and fresh chain to handle them
 		if atomic.LoadUint32(&pm.acceptTxs) == 0 {
@@ -681,7 +680,7 @@ func (pm *ProtocolManager) handleMsg(p *peer) error {
 			}
 			p.MarkTransaction(tx.Hash()) // 标记节点P已经拥有了这个交易
 		}
-		fmt.Printf("recve from net %v",txs)
+		//fmt.Printf("recve from net %v",txs)
 		pm.txpool.AddRemotes(txs) //将其他节点批量交易发送到交易池中
 
 	default:
@@ -756,7 +755,7 @@ func (self *ProtocolManager) txBroadcastLoop() {
 		case event := <-self.txCh:
 			self.BroadcastTx(event.Tx.Hash(), event.Tx)
 
-		// Err() channel will be closed when unsubscribing.
+			// Err() channel will be closed when unsubscribing.
 		case <-self.txSub.Err():
 			return
 		}
