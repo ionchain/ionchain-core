@@ -1,0 +1,1 @@
+交易成功返回hash，并且可通过eth.getTransaction("hash")接口可查询交易所在区块即代表转账成功。
