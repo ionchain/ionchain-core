@@ -23,11 +23,12 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"net"
+	"net/http"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ionchain/ionchain-core/common"
@@ -36,12 +37,15 @@ import (
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/ionc"
+	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/event"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/log"
+	"github.com/ionchain/ionchain-core/miner"
+	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/p2p"
 	"github.com/ionchain/ionchain-core/rpc"
-	"golang.org/x/net/websocket"
+	"github.com/gorilla/websocket"
 )
 
 const (
@@ -49,30 +53,40 @@ const (
 	// history request.
 	historyUpdateRange = 50
 
-	// txChanSize is the size of channel listening to TxPreEvent.
+	// txChanSize is the size of channel listening to NewTxsEvent.
 	// The number is referenced from the size of tx pool.
 	txChanSize = 4096
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 )
 
-type txPool interface {
-	// SubscribeTxPreEvent should return an event subscription of
-	// TxPreEvent and send events to the given channel.
-	SubscribeTxPreEvent(chan<- core.TxPreEvent) event.Subscription
-}
-
-type blockChain interface {
+// backend encompasses the bare-minimum functionality needed for ioncstats reporting
+type backend interface {
 	SubscribeChainHeadEvent(ch chan<- core.ChainHeadEvent) event.Subscription
+	SubscribeNewTxsEvent(ch chan<- core.NewTxsEvent) event.Subscription
+	CurrentHeader() *types.Header
+	HeaderByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Header, error)
+	GetTd(ctx context.Context, hash common.Hash) *big.Int
+	Stats() (pending int, queued int)
+	Downloader() *downloader.Downloader
 }
 
-// Service implements an ionchain netstats reporting daemon that pushes local
+// fullNodeBackend encompasses the functionality necessary for a full node
+// reporting to ioncstats
+type fullNodeBackend interface {
+	backend
+	Miner() *miner.Miner
+	BlockByNumber(ctx context.Context, number rpc.BlockNumber) (*types.Block, error)
+	CurrentBlock() *types.Block
+	SuggestPrice(ctx context.Context) (*big.Int, error)
+}
+
+// Service implements an IonChain netstats reporting daemon that pushes local
 // chain statistics up to a monitoring server.
 type Service struct {
-	server *p2p.Server        // Peer-to-peer server to retrieve networking infos
-	eth    *ionc.IONChain     // Full ionchain service if monitoring a full node
-	les    *les.LightIONChain // Light ionchain service if monitoring a light node
-	engine consensus.Engine   // Consensus engine to retrieve variadic block fields
+	server  *p2p.Server // Peer-to-peer server to retrieve networking infos
+	backend backend
+	engine  consensus.Engine // Consensus engine to retrieve variadic block fields
 
 	node string // Name of the node to display on the monitoring page
 	pass string // Password to authorize access to the monitoring page
@@ -80,53 +94,86 @@ type Service struct {
 
 	pongCh chan struct{} // Pong notifications are fed into this channel
 	histCh chan []uint64 // History request block numbers are fed into this channel
+
+}
+
+// connWrapper is a wrapper to prevent concurrent-write or concurrent-read on the
+// websocket.
+//
+// From Gorilla websocket docs:
+//   Connections support one concurrent reader and one concurrent writer.
+//   Applications are responsible for ensuring that no more than one goroutine calls the write methods
+//     - NextWriter, SetWriteDeadline, WriteMessage, WriteJSON, EnableWriteCompression, SetCompressionLevel
+//   concurrently and that no more than one goroutine calls the read methods
+//     - NextReader, SetReadDeadline, ReadMessage, ReadJSON, SetPongHandler, SetPingHandler
+//   concurrently.
+//   The Close and WriteControl methods can be called concurrently with all other methods.
+type connWrapper struct {
+	conn *websocket.Conn
+
+	rlock sync.Mutex
+	wlock sync.Mutex
+}
+
+func newConnectionWrapper(conn *websocket.Conn) *connWrapper {
+	return &connWrapper{conn: conn}
+}
+
+// WriteJSON wraps corresponding method on the websocket but is safe for concurrent calling
+func (w *connWrapper) WriteJSON(v interface{}) error {
+	w.wlock.Lock()
+	defer w.wlock.Unlock()
+
+	return w.conn.WriteJSON(v)
+}
+
+// ReadJSON wraps corresponding method on the websocket but is safe for concurrent calling
+func (w *connWrapper) ReadJSON(v interface{}) error {
+	w.rlock.Lock()
+	defer w.rlock.Unlock()
+
+	return w.conn.ReadJSON(v)
+}
+
+// Close wraps corresponding method on the websocket but is safe for concurrent calling
+func (w *connWrapper) Close() error {
+	// The Close and WriteControl methods can be called concurrently with all other methods,
+	// so the mutex is not used here
+	return w.conn.Close()
 }
 
 // New returns a monitoring service ready for stats reporting.
-func New(url string, ethServ *ionc.IONChain, lesServ *les.LightIONChain) (*Service, error) {
+func New(node *node.Node, backend backend, engine consensus.Engine, url string) error {
 	// Parse the netstats connection url
 	re := regexp.MustCompile("([^:@]*)(:([^@]*))?@(.+)")
 	parts := re.FindStringSubmatch(url)
 	if len(parts) != 5 {
-		return nil, fmt.Errorf("invalid netstats url: \"%s\", should be nodename:secret@host:port", url)
+		return fmt.Errorf("invalid netstats url: \"%s\", should be nodename:secret@host:port", url)
 	}
-	// Assemble and return the stats service
-	var engine consensus.Engine
-	if ethServ != nil {
-		engine = ethServ.Engine()
-	} else {
-		engine = lesServ.Engine()
+	ethstats := &Service{
+		backend: backend,
+		engine:  engine,
+		server:  node.Server(),
+		node:    parts[1],
+		pass:    parts[3],
+		host:    parts[4],
+		pongCh:  make(chan struct{}),
+		histCh:  make(chan []uint64, 1),
 	}
-	return &Service{
-		eth:    ethServ,
-		les:    lesServ,
-		engine: engine,
-		node:   parts[1],
-		pass:   parts[3],
-		host:   parts[4],
-		pongCh: make(chan struct{}),
-		histCh: make(chan []uint64, 1),
-	}, nil
+
+	node.RegisterLifecycle(ethstats)
+	return nil
 }
 
-// Protocols implements node.Service, returning the P2P network protocols used
-// by the stats service (nil as it doesn't use the devp2p overlay network).
-func (s *Service) Protocols() []p2p.Protocol { return nil }
-
-// APIs implements node.Service, returning the RPC API endpoints provided by the
-// stats service (nil as it doesn't provide any user callable APIs).
-func (s *Service) APIs() []rpc.API { return nil }
-
-// Start implements node.Service, starting up the monitoring and reporting daemon.
-func (s *Service) Start(server *p2p.Server) error {
-	s.server = server
+// Start implements node.Lifecycle, starting up the monitoring and reporting daemon.
+func (s *Service) Start() error {
 	go s.loop()
 
 	log.Info("Stats daemon started")
 	return nil
 }
 
-// Stop implements node.Service, terminating the monitoring and reporting daemon.
+// Stop implements node.Lifecycle, terminating the monitoring and reporting daemon.
 func (s *Service) Stop() error {
 	log.Info("Stats daemon stopped")
 	return nil
@@ -136,25 +183,15 @@ func (s *Service) Stop() error {
 // until termination.
 func (s *Service) loop() {
 	// Subscribe to chain events to execute updates on
-	var blockchain blockChain
-	var txpool txPool
-	if s.eth != nil {
-		blockchain = s.eth.BlockChain()
-		txpool = s.eth.TxPool()
-	} else {
-		blockchain = s.les.BlockChain()
-		txpool = s.les.TxPool()
-	}
-
 	chainHeadCh := make(chan core.ChainHeadEvent, chainHeadChanSize)
-	headSub := blockchain.SubscribeChainHeadEvent(chainHeadCh)
+	headSub := s.backend.SubscribeChainHeadEvent(chainHeadCh)
 	defer headSub.Unsubscribe()
 
-	txEventCh := make(chan core.TxPreEvent, txChanSize)
-	txSub := txpool.SubscribeTxPreEvent(txEventCh)
+	txEventCh := make(chan core.NewTxsEvent, txChanSize)
+	txSub := s.backend.SubscribeNewTxsEvent(txEventCh)
 	defer txSub.Unsubscribe()
 
-	// Start a goroutine that exhausts the subsciptions to avoid events piling up
+	// Start a goroutine that exhausts the subscriptions to avoid events piling up
 	var (
 		quitCh = make(chan struct{})
 		headCh = make(chan *types.Block, 1)
@@ -193,84 +230,100 @@ func (s *Service) loop() {
 			}
 		}
 		close(quitCh)
-		return
 	}()
+
+	// Resolve the URL, defaulting to TLS, but falling back to none too
+	path := fmt.Sprintf("%s/api", s.host)
+	urls := []string{path}
+
+	// url.Parse and url.IsAbs is unsuitable (https://github.com/golang/go/issues/19779)
+	if !strings.Contains(path, "://") {
+		urls = []string{"wss://" + path, "ws://" + path}
+	}
+
+	errTimer := time.NewTimer(0)
+	defer errTimer.Stop()
 	// Loop reporting until termination
 	for {
-		// Resolve the URL, defaulting to TLS, but falling back to none too
-		path := fmt.Sprintf("%s/api", s.host)
-		urls := []string{path}
-
-		if !strings.Contains(path, "://") { // url.Parse and url.IsAbs is unsuitable (https://github.com/golang/go/issues/19779)
-			urls = []string{"wss://" + path, "ws://" + path}
-		}
-		// Establish a websocket connection to the server on any supported URL
-		var (
-			conf *websocket.Config
-			conn *websocket.Conn
-			err  error
-		)
-		for _, url := range urls {
-			if conf, err = websocket.NewConfig(url, "http://localhost/"); err != nil {
+		select {
+		case <-quitCh:
+			return
+		case <-errTimer.C:
+			// Establish a websocket connection to the server on any supported URL
+			var (
+				conn *connWrapper
+				err  error
+			)
+			dialer := websocket.Dialer{HandshakeTimeout: 5 * time.Second}
+			header := make(http.Header)
+			header.Set("origin", "http://localhost")
+			for _, url := range urls {
+				c, _, e := dialer.Dial(url, header)
+				err = e
+				if err == nil {
+					conn = newConnectionWrapper(c)
+					break
+				}
+			}
+			if err != nil {
+				log.Warn("Stats server unreachable", "err", err)
+				errTimer.Reset(10 * time.Second)
 				continue
 			}
-			conf.Dialer = &net.Dialer{Timeout: 5 * time.Second}
-			if conn, err = websocket.DialConfig(conf); err == nil {
-				break
-			}
-		}
-		if err != nil {
-			log.Warn("Stats server unreachable", "err", err)
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		// Authenticate the client with the server
-		if err = s.login(conn); err != nil {
-			log.Warn("Stats login failed", "err", err)
-			conn.Close()
-			time.Sleep(10 * time.Second)
-			continue
-		}
-		go s.readLoop(conn)
-
-		// Send the initial stats so our node looks decent from the get go
-		if err = s.report(conn); err != nil {
-			log.Warn("Initial stats report failed", "err", err)
-			conn.Close()
-			continue
-		}
-		// Keep sending status updates until the connection breaks
-		fullReport := time.NewTicker(15 * time.Second)
-
-		for err == nil {
-			select {
-			case <-quitCh:
+			// Authenticate the client with the server
+			if err = s.login(conn); err != nil {
+				log.Warn("Stats login failed", "err", err)
 				conn.Close()
-				return
+				errTimer.Reset(10 * time.Second)
+				continue
+			}
+			go s.readLoop(conn)
 
-			case <-fullReport.C:
-				if err = s.report(conn); err != nil {
-					log.Warn("Full stats report failed", "err", err)
-				}
-			case list := <-s.histCh:
-				if err = s.reportHistory(conn, list); err != nil {
-					log.Warn("Requested history report failed", "err", err)
-				}
-			case head := <-headCh:
-				if err = s.reportBlock(conn, head); err != nil {
-					log.Warn("Block stats report failed", "err", err)
-				}
-				if err = s.reportPending(conn); err != nil {
-					log.Warn("Post-block transaction stats report failed", "err", err)
-				}
-			case <-txCh:
-				if err = s.reportPending(conn); err != nil {
-					log.Warn("Transaction stats report failed", "err", err)
+			// Send the initial stats so our node looks decent from the get go
+			if err = s.report(conn); err != nil {
+				log.Warn("Initial stats report failed", "err", err)
+				conn.Close()
+				errTimer.Reset(0)
+				continue
+			}
+			// Keep sending status updates until the connection breaks
+			fullReport := time.NewTicker(15 * time.Second)
+
+			for err == nil {
+				select {
+				case <-quitCh:
+					fullReport.Stop()
+					// Make sure the connection is closed
+					conn.Close()
+					return
+
+				case <-fullReport.C:
+					if err = s.report(conn); err != nil {
+						log.Warn("Full stats report failed", "err", err)
+					}
+				case list := <-s.histCh:
+					if err = s.reportHistory(conn, list); err != nil {
+						log.Warn("Requested history report failed", "err", err)
+					}
+				case head := <-headCh:
+					if err = s.reportBlock(conn, head); err != nil {
+						log.Warn("Block stats report failed", "err", err)
+					}
+					if err = s.reportPending(conn); err != nil {
+						log.Warn("Post-block transaction stats report failed", "err", err)
+					}
+				case <-txCh:
+					if err = s.reportPending(conn); err != nil {
+						log.Warn("Transaction stats report failed", "err", err)
+					}
 				}
 			}
+			fullReport.Stop()
+
+			// Close the current connection and establish a new one
+			conn.Close()
+			errTimer.Reset(0)
 		}
-		// Make sure the connection is closed
-		conn.Close()
 	}
 }
 
@@ -278,14 +331,29 @@ func (s *Service) loop() {
 // from the network socket. If any of them match an active request, it forwards
 // it, if they themselves are requests it initiates a reply, and lastly it drops
 // unknown packets.
-func (s *Service) readLoop(conn *websocket.Conn) {
+func (s *Service) readLoop(conn *connWrapper) {
 	// If the read loop exists, close the connection
 	defer conn.Close()
 
 	for {
 		// Retrieve the next generic network packet and bail out on error
+		var blob json.RawMessage
+		if err := conn.ReadJSON(&blob); err != nil {
+			log.Warn("Failed to retrieve stats server message", "err", err)
+			return
+		}
+		// If the network packet is a system ping, respond to it directly
+		var ping string
+		if err := json.Unmarshal(blob, &ping); err == nil && strings.HasPrefix(ping, "primus::ping::") {
+			if err := conn.WriteJSON(strings.Replace(ping, "ping", "pong", -1)); err != nil {
+				log.Warn("Failed to respond to system ping message", "err", err)
+				return
+			}
+			continue
+		}
+		// Not a system ping, try to decode an actual state message
 		var msg map[string][]interface{}
-		if err := websocket.JSON.Receive(conn, &msg); err != nil {
+		if err := json.Unmarshal(blob, &msg); err != nil {
 			log.Warn("Failed to decode stats server message", "err", err)
 			return
 		}
@@ -317,8 +385,11 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 			request, ok := msg["emit"][1].(map[string]interface{})
 			if !ok {
 				log.Warn("Invalid stats history request", "msg", msg["emit"][1])
-				s.histCh <- nil
-				continue // Ethstats sometime sends invalid history requests, ignore those
+				select {
+				case s.histCh <- nil: // Treat it as an no indexes request
+				default:
+				}
+				continue
 			}
 			list, ok := request["list"].([]interface{})
 			if !ok {
@@ -346,7 +417,7 @@ func (s *Service) readLoop(conn *websocket.Conn) {
 	}
 }
 
-// nodeInfo is the collection of metainformation about a node that is displayed
+// nodeInfo is the collection of meta information about a node that is displayed
 // on the monitoring page.
 type nodeInfo struct {
 	Name     string `json:"name"`
@@ -363,26 +434,26 @@ type nodeInfo struct {
 
 // authMsg is the authentication infos needed to login to a monitoring server.
 type authMsg struct {
-	Id     string   `json:"id"`
+	ID     string   `json:"id"`
 	Info   nodeInfo `json:"info"`
 	Secret string   `json:"secret"`
 }
 
 // login tries to authorize the client at the remote server.
-func (s *Service) login(conn *websocket.Conn) error {
+func (s *Service) login(conn *connWrapper) error {
 	// Construct and send the login authentication
 	infos := s.server.NodeInfo()
 
 	var network, protocol string
 	if info := infos.Protocols["ionc"]; info != nil {
-		network = fmt.Sprintf("%d", info.(*ionc.EthNodeInfo).Network)
+		network = fmt.Sprintf("%d", info.(*ionc.NodeInfo).Network)
 		protocol = fmt.Sprintf("ionc/%d", ionc.ProtocolVersions[0])
 	} else {
-		network = fmt.Sprintf("%d", infos.Protocols["les"].(*ionc.EthNodeInfo).Network)
+		network = fmt.Sprintf("%d", infos.Protocols["les"].(*les.NodeInfo).Network)
 		protocol = fmt.Sprintf("les/%d", les.ClientProtocolVersions[0])
 	}
 	auth := &authMsg{
-		Id: s.node,
+		ID: s.node,
 		Info: nodeInfo{
 			Name:     s.node,
 			Node:     infos.Name,
@@ -400,12 +471,12 @@ func (s *Service) login(conn *websocket.Conn) error {
 	login := map[string][]interface{}{
 		"emit": {"hello", auth},
 	}
-	if err := websocket.JSON.Send(conn, login); err != nil {
+	if err := conn.WriteJSON(login); err != nil {
 		return err
 	}
 	// Retrieve the remote ack or connection termination
 	var ack map[string][]string
-	if err := websocket.JSON.Receive(conn, &ack); err != nil || len(ack["emit"]) != 1 || ack["emit"][0] != "ready" {
+	if err := conn.ReadJSON(&ack); err != nil || len(ack["emit"]) != 1 || ack["emit"][0] != "ready" {
 		return errors.New("unauthorized")
 	}
 	return nil
@@ -414,7 +485,7 @@ func (s *Service) login(conn *websocket.Conn) error {
 // report collects all possible data to report and send it to the stats server.
 // This should only be used on reconnects or rarely to avoid overloading the
 // server. Use the individual methods for reporting subscribed events.
-func (s *Service) report(conn *websocket.Conn) error {
+func (s *Service) report(conn *connWrapper) error {
 	if err := s.reportLatency(conn); err != nil {
 		return err
 	}
@@ -432,7 +503,7 @@ func (s *Service) report(conn *websocket.Conn) error {
 
 // reportLatency sends a ping request to the server, measures the RTT time and
 // finally sends a latency update.
-func (s *Service) reportLatency(conn *websocket.Conn) error {
+func (s *Service) reportLatency(conn *connWrapper) error {
 	// Send the current time to the ioncstats server
 	start := time.Now()
 
@@ -442,7 +513,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"clientTime": start.String(),
 		}},
 	}
-	if err := websocket.JSON.Send(conn, ping); err != nil {
+	if err := conn.WriteJSON(ping); err != nil {
 		return err
 	}
 	// Wait for the pong request to arrive back
@@ -464,7 +535,7 @@ func (s *Service) reportLatency(conn *websocket.Conn) error {
 			"latency": latency,
 		}},
 	}
-	return websocket.JSON.Send(conn, stats)
+	return conn.WriteJSON(stats)
 }
 
 // blockStats is the information to report about individual blocks.
@@ -474,8 +545,8 @@ type blockStats struct {
 	ParentHash common.Hash    `json:"parentHash"`
 	Timestamp  *big.Int       `json:"timestamp"`
 	Miner      common.Address `json:"miner"`
-	GasUsed    *big.Int       `json:"gasUsed"`
-	GasLimit   *big.Int       `json:"gasLimit"`
+	GasUsed    uint64         `json:"gasUsed"`
+	GasLimit   uint64         `json:"gasLimit"`
 	Diff       string         `json:"difficulty"`
 	TotalDiff  string         `json:"totalDifficulty"`
 	Txs        []txStats      `json:"transactions"`
@@ -500,8 +571,8 @@ func (s uncleStats) MarshalJSON() ([]byte, error) {
 	return []byte("[]"), nil
 }
 
-// reportBlock retrieves the current chain head and repors it to the stats server.
-func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
+// reportBlock retrieves the current chain head and reports it to the stats server.
+func (s *Service) reportBlock(conn *connWrapper, block *types.Block) error {
 	// Gather the block details from the header or block chain
 	details := s.assembleBlockStats(block)
 
@@ -515,7 +586,7 @@ func (s *Service) reportBlock(conn *websocket.Conn, block *types.Block) error {
 	report := map[string][]interface{}{
 		"emit": {"block", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // assembleBlockStats retrieves any required metadata to report a single block
@@ -528,13 +599,15 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		txs    []txStats
 		uncles []*types.Header
 	)
-	if s.eth != nil {
-		// Full nodes have all needed information available
+
+	// check if backend is a full node
+	fullBackend, ok := s.backend.(fullNodeBackend)
+	if ok {
 		if block == nil {
-			block = s.eth.BlockChain().CurrentBlock()
+			block = fullBackend.CurrentBlock()
 		}
 		header = block.Header()
-		td = s.eth.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
+		td = fullBackend.GetTd(context.Background(), header.Hash())
 
 		txs = make([]txStats, len(block.Transactions()))
 		for i, tx := range block.Transactions() {
@@ -546,11 +619,12 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		if block != nil {
 			header = block.Header()
 		} else {
-			header = s.les.BlockChain().CurrentHeader()
+			header = s.backend.CurrentHeader()
 		}
-		td = s.les.BlockChain().GetTd(header.Hash(), header.Number.Uint64())
+		td = s.backend.GetTd(context.Background(), header.Hash())
 		txs = []txStats{}
 	}
+
 	// Assemble and return the block stats
 	author, _ := s.engine.Author(header)
 
@@ -558,10 +632,10 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 		Number:     header.Number,
 		Hash:       header.Hash(),
 		ParentHash: header.ParentHash,
-		Timestamp:  header.Time,
+		Timestamp:  new(big.Int).SetUint64(header.Time),
 		Miner:      author,
-		GasUsed:    new(big.Int).Set(header.GasUsed),
-		GasLimit:   new(big.Int).Set(header.GasLimit),
+		GasUsed:    header.GasUsed,
+		GasLimit:   header.GasLimit,
 		Diff:       header.Difficulty.String(),
 		TotalDiff:  td.String(),
 		Txs:        txs,
@@ -573,7 +647,7 @@ func (s *Service) assembleBlockStats(block *types.Block) *blockStats {
 
 // reportHistory retrieves the most recent batch of blocks and reports it to the
 // stats server.
-func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
+func (s *Service) reportHistory(conn *connWrapper, list []uint64) error {
 	// Figure out the indexes that need reporting
 	indexes := make([]uint64, 0, historyUpdateRange)
 	if len(list) > 0 {
@@ -581,12 +655,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		indexes = append(indexes, list...)
 	} else {
 		// No indexes requested, send back the top ones
-		var head int64
-		if s.eth != nil {
-			head = s.eth.BlockChain().CurrentHeader().Number.Int64()
-		} else {
-			head = s.les.BlockChain().CurrentHeader().Number.Int64()
-		}
+		head := s.backend.CurrentHeader().Number.Int64()
 		start := head - historyUpdateRange + 1
 		if start < 0 {
 			start = 0
@@ -598,12 +667,13 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	// Gather the batch of blocks to report
 	history := make([]*blockStats, len(indexes))
 	for i, number := range indexes {
+		fullBackend, ok := s.backend.(fullNodeBackend)
 		// Retrieve the next block if it's known to us
 		var block *types.Block
-		if s.eth != nil {
-			block = s.eth.BlockChain().GetBlockByNumber(number)
+		if ok {
+			block, _ = fullBackend.BlockByNumber(context.Background(), rpc.BlockNumber(number)) // TODO ignore error here ?
 		} else {
-			if header := s.les.BlockChain().GetHeaderByNumber(number); header != nil {
+			if header, _ := s.backend.HeaderByNumber(context.Background(), rpc.BlockNumber(number)); header != nil {
 				block = types.NewBlockWithHeader(header)
 			}
 		}
@@ -614,6 +684,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 		}
 		// Ran out of blocks, cut the report short and send
 		history = history[len(history)-i:]
+		break
 	}
 	// Assemble the history report and send it to the server
 	if len(history) > 0 {
@@ -628,7 +699,7 @@ func (s *Service) reportHistory(conn *websocket.Conn, list []uint64) error {
 	report := map[string][]interface{}{
 		"emit": {"history", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // pendStats is the information to report about pending transactions.
@@ -638,14 +709,9 @@ type pendStats struct {
 
 // reportPending retrieves the current number of pending transactions and reports
 // it to the stats server.
-func (s *Service) reportPending(conn *websocket.Conn) error {
+func (s *Service) reportPending(conn *connWrapper) error {
 	// Retrieve the pending count from the local blockchain
-	var pending int
-	if s.eth != nil {
-		pending, _ = s.eth.TxPool().Stats()
-	} else {
-		pending = s.les.TxPool().Stats()
-	}
+	pending, _ := s.backend.Stats()
 	// Assemble the transaction stats and send it to the server
 	log.Trace("Sending pending transactions to ioncstats", "count", pending)
 
@@ -658,7 +724,7 @@ func (s *Service) reportPending(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"pending", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }
 
 // nodeStats is the information to report about the local node.
@@ -672,9 +738,9 @@ type nodeStats struct {
 	Uptime   int  `json:"uptime"`
 }
 
-// reportPending retrieves various stats about the node at the networking and
+// reportStats retrieves various stats about the node at the networking and
 // mining layer and reports it to the stats server.
-func (s *Service) reportStats(conn *websocket.Conn) error {
+func (s *Service) reportStats(conn *connWrapper) error {
 	// Gather the syncing and mining infos from the local miner instance
 	var (
 		mining   bool
@@ -682,18 +748,20 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 		syncing  bool
 		gasprice int
 	)
-	if s.eth != nil {
-		mining = s.eth.Miner().Mining()
-		//hashrate = int(s.ionc.Miner().HashRate())
+	// check if backend is a full node
+	fullBackend, ok := s.backend.(fullNodeBackend)
+	if ok {
+		mining = fullBackend.Miner().Mining()
+		hashrate = int(fullBackend.Miner().HashRate())
 
-		sync := s.eth.Downloader().Progress()
-		syncing = s.eth.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+		sync := fullBackend.Downloader().Progress()
+		syncing = fullBackend.CurrentHeader().Number.Uint64() >= sync.HighestBlock
 
-		price, _ := s.eth.ApiBackend.SuggestPrice(context.Background())
+		price, _ := fullBackend.SuggestPrice(context.Background())
 		gasprice = int(price.Uint64())
 	} else {
-		sync := s.les.Downloader().Progress()
-		syncing = s.les.BlockChain().CurrentHeader().Number.Uint64() >= sync.HighestBlock
+		sync := s.backend.Downloader().Progress()
+		syncing = s.backend.CurrentHeader().Number.Uint64() >= sync.HighestBlock
 	}
 	// Assemble the node stats and send it to the server
 	log.Trace("Sending node details to ioncstats")
@@ -713,5 +781,5 @@ func (s *Service) reportStats(conn *websocket.Conn) error {
 	report := map[string][]interface{}{
 		"emit": {"stats", stats},
 	}
-	return websocket.JSON.Send(conn, report)
+	return conn.WriteJSON(report)
 }

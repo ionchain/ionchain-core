@@ -29,15 +29,15 @@ import (
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ioncclient"
 	"github.com/ionchain/ionchain-core/ioncstats"
+	"github.com/ionchain/ionchain-core/internal/debug"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/p2p"
 	"github.com/ionchain/ionchain-core/p2p/nat"
 	"github.com/ionchain/ionchain-core/params"
-	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 )
 
-// NodeConfig represents the collection of configuration values to fine tune the ionc
+// NodeConfig represents the collection of configuration values to fine tune the Geth
 // node embedded into a mobile process. The available values are a subset of the
 // entire API provided by go-ionchain to reduce the maintenance surface and dev
 // complexity.
@@ -49,29 +49,29 @@ type NodeConfig struct {
 	// set to zero, then only the configured static and trusted peers can connect.
 	MaxPeers int
 
-	// ionchainEnabled specifies whether the node should run the ionchain protocol.
-	IONChainEnabled bool
+	// IonchainEnabled specifies whether the node should run the IonChain protocol.
+	IonchainEnabled bool
 
-	// ionchainNetworkID is the network identifier used by the ionchain protocol to
+	// IonchainNetworkID is the network identifier used by the IonChain protocol to
 	// decide if remote peers should be accepted or not.
-	IONChainNetworkID int64 // uint64 in truth, but Java can't handle that...
+	IonchainNetworkID int64 // uint64 in truth, but Java can't handle that...
 
-	// ionchainGenesis is the genesis JSON to use to seed the blockchain with. An
+	// IonchainGenesis is the genesis JSON to use to seed the blockchain with. An
 	// empty genesis state is equivalent to using the mainnet's state.
-	IONChainGenesis string
+	IonchainGenesis string
 
-	// ionchainDatabaseCache is the system memory in MB to allocate for database caching.
+	// IonchainDatabaseCache is the system memory in MB to allocate for database caching.
 	// A minimum of 16MB is always reserved.
-	IONChainDatabaseCache int
+	IonchainDatabaseCache int
 
-	// ionchainNetStats is a netstats connection string to use to report various
+	// IonchainNetStats is a netstats connection string to use to report various
 	// chain, transaction and node stats to a monitoring server.
 	//
 	// It has the form "nodename:secret@host:port"
-	IONChainNetStats string
+	IonchainNetStats string
 
-	// WhisperEnabled specifies whether the node should run the Whisper protocol.
-	WhisperEnabled bool
+	// Listening address of pprof server.
+	PprofAddress string
 }
 
 // defaultNodeConfig contains the default node configuration values to use if all
@@ -79,9 +79,9 @@ type NodeConfig struct {
 var defaultNodeConfig = &NodeConfig{
 	BootstrapNodes:        FoundationBootnodes(),
 	MaxPeers:              25,
-	IONChainEnabled:       true,
-	IONChainNetworkID:     1,
-	IONChainDatabaseCache: 16,
+	IonchainEnabled:       true,
+	IonchainNetworkID:     1,
+	IonchainDatabaseCache: 16,
 }
 
 // NewNodeConfig creates a new node option set, initialized to the default values.
@@ -90,12 +90,28 @@ func NewNodeConfig() *NodeConfig {
 	return &config
 }
 
-// Node represents a ionc ionchain node instance.
+// AddBootstrapNode adds an additional bootstrap node to the node config.
+func (conf *NodeConfig) AddBootstrapNode(node *Enode) {
+	conf.BootstrapNodes.Append(node)
+}
+
+// EncodeJSON encodes a NodeConfig into a JSON data dump.
+func (conf *NodeConfig) EncodeJSON() (string, error) {
+	data, err := json.Marshal(conf)
+	return string(data), err
+}
+
+// String returns a printable representation of the node config.
+func (conf *NodeConfig) String() string {
+	return encodeOrError(conf)
+}
+
+// Node represents a Geth IonChain node instance.
 type Node struct {
 	node *node.Node
 }
 
-// NewNode creates and configures a new ionc node.
+// NewNode creates and configures a new Geth node.
 func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	// If no or partial configurations were specified, use defaults
 	if config == nil {
@@ -107,95 +123,111 @@ func NewNode(datadir string, config *NodeConfig) (stack *Node, _ error) {
 	if config.BootstrapNodes == nil || config.BootstrapNodes.Size() == 0 {
 		config.BootstrapNodes = defaultNodeConfig.BootstrapNodes
 	}
+
+	if config.PprofAddress != "" {
+		debug.StartPProf(config.PprofAddress, true)
+	}
+
 	// Create the empty networking stack
 	nodeConf := &node.Config{
 		Name:        clientIdentifier,
-		Version:     params.Version,
+		Version:     params.VersionWithMeta,
 		DataDir:     datadir,
 		KeyStoreDir: filepath.Join(datadir, "keystore"), // Mobile should never use internal keystores!
 		P2P: p2p.Config{
 			NoDiscovery:      true,
 			DiscoveryV5:      true,
-			DiscoveryV5Addr:  ":0",
 			BootstrapNodesV5: config.BootstrapNodes.nodes,
 			ListenAddr:       ":0",
 			NAT:              nat.Any(),
 			MaxPeers:         config.MaxPeers,
 		},
 	}
+
 	rawStack, err := node.New(nodeConf)
 	if err != nil {
 		return nil, err
 	}
 
+	debug.Memsize.Add("node", rawStack)
+
 	var genesis *core.Genesis
-	if config.IONChainGenesis != "" {
+	if config.IonchainGenesis != "" {
 		// Parse the user supplied genesis spec if not mainnet
 		genesis = new(core.Genesis)
-		if err := json.Unmarshal([]byte(config.IONChainGenesis), genesis); err != nil {
+		if err := json.Unmarshal([]byte(config.IonchainGenesis), genesis); err != nil {
 			return nil, fmt.Errorf("invalid genesis spec: %v", err)
 		}
-		// If we have the testnet, hard code the chain configs too
-		if config.IONChainGenesis == TestnetGenesis() {
-			genesis.Config = params.TestnetChainConfig
-			if config.IONChainNetworkID == 1 {
-				config.IONChainNetworkID = 3
+		// If we have the Ropsten testnet, hard code the chain configs too
+		if config.IonchainGenesis == RopstenGenesis() {
+			genesis.Config = params.RopstenChainConfig
+			if config.IonchainNetworkID == 1 {
+				config.IonchainNetworkID = 3
+			}
+		}
+		// If we have the Rinkeby testnet, hard code the chain configs too
+		if config.IonchainGenesis == RinkebyGenesis() {
+			genesis.Config = params.RinkebyChainConfig
+			if config.IonchainNetworkID == 1 {
+				config.IonchainNetworkID = 4
+			}
+		}
+		// If we have the Goerli testnet, hard code the chain configs too
+		if config.IonchainGenesis == GoerliGenesis() {
+			genesis.Config = params.GoerliChainConfig
+			if config.IonchainNetworkID == 1 {
+				config.IonchainNetworkID = 5
 			}
 		}
 	}
-	// Register the ionchain protocol if requested
-	if config.IONChainEnabled {
+	// Register the IonChain protocol if requested
+	if config.IonchainEnabled {
 		ethConf := ionc.DefaultConfig
 		ethConf.Genesis = genesis
 		ethConf.SyncMode = downloader.LightSync
-		ethConf.NetworkId = uint64(config.IONChainNetworkID)
-		ethConf.DatabaseCache = config.IONChainDatabaseCache
-		if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-			return les.New(ctx, &ethConf)
-		}); err != nil {
-			return nil, fmt.Errorf("ionchain init: %v", err)
+		ethConf.NetworkId = uint64(config.IonchainNetworkID)
+		ethConf.DatabaseCache = config.IonchainDatabaseCache
+		lesBackend, err := les.New(rawStack, &ethConf)
+		if err != nil {
+			return nil, fmt.Errorf("ethereum init: %v", err)
 		}
 		// If netstats reporting is requested, do it
-		if config.IONChainNetStats != "" {
-			if err := rawStack.Register(func(ctx *node.ServiceContext) (node.Service, error) {
-				var lesServ *les.LightIONChain
-				ctx.Service(&lesServ)
-
-				return ioncstats.New(config.IONChainNetStats, nil, lesServ)
-			}); err != nil {
+		if config.IonchainNetStats != "" {
+			if err := ioncstats.New(rawStack, lesBackend.ApiBackend, lesBackend.Engine(), config.IonchainNetStats); err != nil {
 				return nil, fmt.Errorf("netstats init: %v", err)
 			}
-		}
-	}
-	// Register the Whisper protocol if requested
-	if config.WhisperEnabled {
-		if err := rawStack.Register(func(*node.ServiceContext) (node.Service, error) {
-			return whisper.New(&whisper.DefaultConfig), nil
-		}); err != nil {
-			return nil, fmt.Errorf("whisper init: %v", err)
 		}
 	}
 	return &Node{rawStack}, nil
 }
 
+// Close terminates a running node along with all it's services, tearing internal state
+// down. It is not possible to restart a closed node.
+func (n *Node) Close() error {
+	return n.node.Close()
+}
+
 // Start creates a live P2P node and starts running it.
 func (n *Node) Start() error {
+	// TODO: recreate the node so it can be started multiple times
 	return n.node.Start()
 }
 
-// Stop terminates a running node along with all it's services. In the node was
-// not started, an error is returned.
+// Stop terminates a running node along with all its services. If the node was not started,
+// an error is returned. It is not possible to restart a stopped node.
+//
+// Deprecated: use Close()
 func (n *Node) Stop() error {
-	return n.node.Stop()
+	return n.node.Close()
 }
 
-// GetionchainClient retrieves a client to access the ionchain subsystem.
-func (n *Node) GetIONChainClient() (client *IONChainClient, _ error) {
+// GetIonchainClient retrieves a client to access the IonChain subsystem.
+func (n *Node) GetIonchainClient() (client *IonchainClient, _ error) {
 	rpc, err := n.node.Attach()
 	if err != nil {
 		return nil, err
 	}
-	return &IONChainClient{ioncclient.NewClient(rpc)}, nil
+	return &IonchainClient{ioncclient.NewClient(rpc)}, nil
 }
 
 // GetNodeInfo gathers and returns a collection of metadata known about the host.

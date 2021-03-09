@@ -18,29 +18,29 @@ package les
 
 import (
 	"context"
+	"time"
 
+	"github.com/ionchain/ionchain-core/common/mclock"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/light"
-	"github.com/ionchain/ionchain-core/log"
 )
 
 // LesOdr implements light.OdrBackend
 type LesOdr struct {
 	db                                         ioncdb.Database
+	indexerConfig                              *light.IndexerConfig
 	chtIndexer, bloomTrieIndexer, bloomIndexer *core.ChainIndexer
 	retriever                                  *retrieveManager
 	stop                                       chan struct{}
 }
 
-func NewLesOdr(db ioncdb.Database, chtIndexer, bloomTrieIndexer, bloomIndexer *core.ChainIndexer, retriever *retrieveManager) *LesOdr {
+func NewLesOdr(db ioncdb.Database, config *light.IndexerConfig, retriever *retrieveManager) *LesOdr {
 	return &LesOdr{
-		db:               db,
-		chtIndexer:       chtIndexer,
-		bloomTrieIndexer: bloomTrieIndexer,
-		bloomIndexer:     bloomIndexer,
-		retriever:        retriever,
-		stop:             make(chan struct{}),
+		db:            db,
+		indexerConfig: config,
+		retriever:     retriever,
+		stop:          make(chan struct{}),
 	}
 }
 
@@ -52,6 +52,13 @@ func (odr *LesOdr) Stop() {
 // Database returns the backing database
 func (odr *LesOdr) Database() ioncdb.Database {
 	return odr.db
+}
+
+// SetIndexers adds the necessary chain indexers to the ODR backend
+func (odr *LesOdr) SetIndexers(chtIndexer, bloomTrieIndexer, bloomIndexer *core.ChainIndexer) {
+	odr.chtIndexer = chtIndexer
+	odr.bloomTrieIndexer = bloomTrieIndexer
+	odr.bloomIndexer = bloomIndexer
 }
 
 // ChtIndexer returns the CHT chain indexer
@@ -69,14 +76,19 @@ func (odr *LesOdr) BloomIndexer() *core.ChainIndexer {
 	return odr.bloomIndexer
 }
 
+// IndexerConfig returns the indexer config.
+func (odr *LesOdr) IndexerConfig() *light.IndexerConfig {
+	return odr.indexerConfig
+}
+
 const (
-	MsgBlockBodies = iota
+	MsgBlockHeaders = iota
+	MsgBlockBodies
 	MsgCode
 	MsgReceipts
-	MsgProofsV1
 	MsgProofsV2
-	MsgHeaderProofs
 	MsgHelperTrieProofs
+	MsgTxStatus
 )
 
 // Msg encodes a LES message that delivers reply data for a request
@@ -94,25 +106,33 @@ func (odr *LesOdr) Retrieve(ctx context.Context, req light.OdrRequest) (err erro
 	reqID := genReqID()
 	rq := &distReq{
 		getCost: func(dp distPeer) uint64 {
-			return lreq.GetCost(dp.(*peer))
+			return lreq.GetCost(dp.(*serverPeer))
 		},
 		canSend: func(dp distPeer) bool {
-			p := dp.(*peer)
-			return lreq.CanSend(p)
+			p := dp.(*serverPeer)
+			if !p.onlyAnnounce {
+				return lreq.CanSend(p)
+			}
+			return false
 		},
 		request: func(dp distPeer) func() {
-			p := dp.(*peer)
+			p := dp.(*serverPeer)
 			cost := lreq.GetCost(p)
-			p.fcServer.QueueRequest(reqID, cost)
+			p.fcServer.QueuedRequest(reqID, cost)
 			return func() { lreq.Request(reqID, p) }
 		},
 	}
 
-	if err = odr.retriever.retrieve(ctx, reqID, rq, func(p distPeer, msg *Msg) error { return lreq.Validate(odr.db, msg) }, odr.stop); err == nil {
-		// retrieved from network, store in db
-		req.StoreResult(odr.db)
-	} else {
-		log.Debug("Failed to retrieve data from network", "err", err)
+	defer func(sent mclock.AbsTime) {
+		if err != nil {
+			return
+		}
+		requestRTT.Update(time.Duration(mclock.Now() - sent))
+	}(mclock.Now())
+
+	if err := odr.retriever.retrieve(ctx, reqID, rq, func(p distPeer, msg *Msg) error { return lreq.Validate(odr.db, msg) }, odr.stop); err != nil {
+		return err
 	}
-	return
+	req.StoreResult(odr.db)
+	return nil
 }

@@ -33,7 +33,7 @@ import (
 // references to the original version, whereas the latter is important to ensure
 // one single canonical form opposed to many allowed ones by the RFC 3986 spec.
 //
-// As such, these URLs should not be used outside of the scope of an ionchain
+// As such, these URLs should not be used outside of the scope of an IonChain
 // wallet or account.
 type URL struct {
 	Scheme string // Protocol scheme to identify a capable account backend
@@ -72,6 +72,22 @@ func (u URL) TerminalString() string {
 // MarshalJSON implements the json.Marshaller interface.
 func (u URL) MarshalJSON() ([]byte, error) {
 	return json.Marshal(u.String())
+}
+
+// UnmarshalJSON parses url.
+func (u *URL) UnmarshalJSON(input []byte) error {
+	var textURL string
+	err := json.Unmarshal(input, &textURL)
+	if err != nil {
+		return err
+	}
+	url, err := parseURL(textURL)
+	if err != nil {
+		return err
+	}
+	u.Scheme = url.Scheme
+	u.Path = url.Path
+	return nil
 }
 
 // Cmp compares x and y and returns:

@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/ionchain/ionchain-core/event"
-	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/enode"
 	"github.com/ionchain/ionchain-core/rlp"
 )
 
@@ -41,9 +39,13 @@ import (
 // separate Msg with a bytes.Reader as Payload for each send.
 type Msg struct {
 	Code       uint64
-	Size       uint32 // size of the paylod
+	Size       uint32 // Size of the raw payload
 	Payload    io.Reader
 	ReceivedAt time.Time
+
+	meterCap  Cap    // Protocol name and version for egress metering
+	meterCode uint64 // Message within protocol for egress metering
+	meterSize uint32 // Compressed message size for ingress metering
 }
 
 // Decode parses the RLP content of a message into
@@ -112,30 +114,6 @@ func SendItems(w MsgWriter, msgcode uint64, elems ...interface{}) error {
 	return Send(w, msgcode, elems)
 }
 
-// netWrapper wraps a MsgReadWriter with locks around
-// ReadMsg/WriteMsg and applies read/write deadlines.
-type netWrapper struct {
-	rmu, wmu sync.Mutex
-
-	rtimeout, wtimeout time.Duration
-	conn               net.Conn
-	wrapped            MsgReadWriter
-}
-
-func (rw *netWrapper) ReadMsg() (Msg, error) {
-	rw.rmu.Lock()
-	defer rw.rmu.Unlock()
-	rw.conn.SetReadDeadline(time.Now().Add(rw.rtimeout))
-	return rw.wrapped.ReadMsg()
-}
-
-func (rw *netWrapper) WriteMsg(msg Msg) error {
-	rw.wmu.Lock()
-	defer rw.wmu.Unlock()
-	rw.conn.SetWriteDeadline(time.Now().Add(rw.wtimeout))
-	return rw.wrapped.WriteMsg(msg)
-}
-
 // eofSignal wraps a reader with eof signaling. the eof channel is
 // closed when the wrapped reader returns an error or when count bytes
 // have been read.
@@ -195,7 +173,7 @@ type MsgPipeRW struct {
 	closed  *int32
 }
 
-// WriteMsg sends a messsage on the pipe.
+// WriteMsg sends a message on the pipe.
 // It blocks until the receiver has consumed the message payload.
 func (p *MsgPipeRW) WriteMsg(msg Msg) error {
 	if atomic.LoadInt32(p.closed) == 0 {
@@ -255,21 +233,20 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 	}
 	if content == nil {
 		return msg.Discard()
-	} else {
-		contentEnc, err := rlp.EncodeToBytes(content)
-		if err != nil {
-			panic("content encode error: " + err.Error())
-		}
-		if int(msg.Size) != len(contentEnc) {
-			return fmt.Errorf("message size mismatch: got %d, want %d", msg.Size, len(contentEnc))
-		}
-		actualContent, err := ioutil.ReadAll(msg.Payload)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(actualContent, contentEnc) {
-			return fmt.Errorf("message payload mismatch:\ngot:  %x\nwant: %x", actualContent, contentEnc)
-		}
+	}
+	contentEnc, err := rlp.EncodeToBytes(content)
+	if err != nil {
+		panic("content encode error: " + err.Error())
+	}
+	if int(msg.Size) != len(contentEnc) {
+		return fmt.Errorf("message size mismatch: got %d, want %d", msg.Size, len(contentEnc))
+	}
+	actualContent, err := ioutil.ReadAll(msg.Payload)
+	if err != nil {
+		return err
+	}
+	if !bytes.Equal(actualContent, contentEnc) {
+		return fmt.Errorf("message payload mismatch:\ngot:  %x\nwant: %x", actualContent, contentEnc)
 	}
 	return nil
 }
@@ -279,60 +256,68 @@ func ExpectMsg(r MsgReader, code uint64, content interface{}) error {
 type msgEventer struct {
 	MsgReadWriter
 
-	feed     *event.Feed
-	peerID   discover.NodeID
-	Protocol string
+	feed          *event.Feed
+	peerID        enode.ID
+	Protocol      string
+	localAddress  string
+	remoteAddress string
 }
 
 // newMsgEventer returns a msgEventer which sends message events to the given
 // feed
-func newMsgEventer(rw MsgReadWriter, feed *event.Feed, peerID discover.NodeID, proto string) *msgEventer {
+func newMsgEventer(rw MsgReadWriter, feed *event.Feed, peerID enode.ID, proto, remote, local string) *msgEventer {
 	return &msgEventer{
 		MsgReadWriter: rw,
 		feed:          feed,
 		peerID:        peerID,
 		Protocol:      proto,
+		remoteAddress: remote,
+		localAddress:  local,
 	}
 }
 
 // ReadMsg reads a message from the underlying MsgReadWriter and emits a
 // "message received" event
-func (self *msgEventer) ReadMsg() (Msg, error) {
-	msg, err := self.MsgReadWriter.ReadMsg()
+func (ev *msgEventer) ReadMsg() (Msg, error) {
+	msg, err := ev.MsgReadWriter.ReadMsg()
 	if err != nil {
 		return msg, err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgRecv,
-		Peer:     self.peerID,
-		Protocol: self.Protocol,
-		MsgCode:  &msg.Code,
-		MsgSize:  &msg.Size,
+	ev.feed.Send(&PeerEvent{
+		Type:          PeerEventTypeMsgRecv,
+		Peer:          ev.peerID,
+		Protocol:      ev.Protocol,
+		MsgCode:       &msg.Code,
+		MsgSize:       &msg.Size,
+		LocalAddress:  ev.localAddress,
+		RemoteAddress: ev.remoteAddress,
 	})
 	return msg, nil
 }
 
 // WriteMsg writes a message to the underlying MsgReadWriter and emits a
 // "message sent" event
-func (self *msgEventer) WriteMsg(msg Msg) error {
-	err := self.MsgReadWriter.WriteMsg(msg)
+func (ev *msgEventer) WriteMsg(msg Msg) error {
+	err := ev.MsgReadWriter.WriteMsg(msg)
 	if err != nil {
 		return err
 	}
-	self.feed.Send(&PeerEvent{
-		Type:     PeerEventTypeMsgSend,
-		Peer:     self.peerID,
-		Protocol: self.Protocol,
-		MsgCode:  &msg.Code,
-		MsgSize:  &msg.Size,
+	ev.feed.Send(&PeerEvent{
+		Type:          PeerEventTypeMsgSend,
+		Peer:          ev.peerID,
+		Protocol:      ev.Protocol,
+		MsgCode:       &msg.Code,
+		MsgSize:       &msg.Size,
+		LocalAddress:  ev.localAddress,
+		RemoteAddress: ev.remoteAddress,
 	})
 	return nil
 }
 
 // Close closes the underlying MsgReadWriter if it implements the io.Closer
 // interface
-func (self *msgEventer) Close() error {
-	if v, ok := self.MsgReadWriter.(io.Closer); ok {
+func (ev *msgEventer) Close() error {
+	if v, ok := ev.MsgReadWriter.(io.Closer); ok {
 		return v.Close()
 	}
 	return nil

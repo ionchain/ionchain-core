@@ -23,21 +23,23 @@ import (
 )
 
 var (
-	headerInMeter      = metrics.NewMeter("ionc/downloader/headers/in")
-	headerReqTimer     = metrics.NewTimer("ionc/downloader/headers/req")
-	headerDropMeter    = metrics.NewMeter("ionc/downloader/headers/drop")
-	headerTimeoutMeter = metrics.NewMeter("ionc/downloader/headers/timeout")
+	headerInMeter      = metrics.NewRegisteredMeter("ionc/downloader/headers/in", nil)
+	headerReqTimer     = metrics.NewRegisteredTimer("ionc/downloader/headers/req", nil)
+	headerDropMeter    = metrics.NewRegisteredMeter("ionc/downloader/headers/drop", nil)
+	headerTimeoutMeter = metrics.NewRegisteredMeter("ionc/downloader/headers/timeout", nil)
 
-	bodyInMeter      = metrics.NewMeter("ionc/downloader/bodies/in")
-	bodyReqTimer     = metrics.NewTimer("ionc/downloader/bodies/req")
-	bodyDropMeter    = metrics.NewMeter("ionc/downloader/bodies/drop")
-	bodyTimeoutMeter = metrics.NewMeter("ionc/downloader/bodies/timeout")
+	bodyInMeter      = metrics.NewRegisteredMeter("ionc/downloader/bodies/in", nil)
+	bodyReqTimer     = metrics.NewRegisteredTimer("ionc/downloader/bodies/req", nil)
+	bodyDropMeter    = metrics.NewRegisteredMeter("ionc/downloader/bodies/drop", nil)
+	bodyTimeoutMeter = metrics.NewRegisteredMeter("ionc/downloader/bodies/timeout", nil)
 
-	receiptInMeter      = metrics.NewMeter("ionc/downloader/receipts/in")
-	receiptReqTimer     = metrics.NewTimer("ionc/downloader/receipts/req")
-	receiptDropMeter    = metrics.NewMeter("ionc/downloader/receipts/drop")
-	receiptTimeoutMeter = metrics.NewMeter("ionc/downloader/receipts/timeout")
+	receiptInMeter      = metrics.NewRegisteredMeter("ionc/downloader/receipts/in", nil)
+	receiptReqTimer     = metrics.NewRegisteredTimer("ionc/downloader/receipts/req", nil)
+	receiptDropMeter    = metrics.NewRegisteredMeter("ionc/downloader/receipts/drop", nil)
+	receiptTimeoutMeter = metrics.NewRegisteredMeter("ionc/downloader/receipts/timeout", nil)
 
-	stateInMeter   = metrics.NewMeter("ionc/downloader/states/in")
-	stateDropMeter = metrics.NewMeter("ionc/downloader/states/drop")
+	stateInMeter   = metrics.NewRegisteredMeter("ionc/downloader/states/in", nil)
+	stateDropMeter = metrics.NewRegisteredMeter("ionc/downloader/states/drop", nil)
+
+	throttleCounter = metrics.NewRegisteredCounter("ionc/downloader/throttle", nil)
 )

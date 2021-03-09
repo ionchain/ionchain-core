@@ -1,3 +1,19 @@
+// Copyright 2017 The go-ionchain Authors
+// This file is part of go-ionchain.
+//
+// go-ionchain is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// go-ionchain is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with go-ionchain. If not, see <http://www.gnu.org/licenses/>.
+
 // p2psim provides a command-line client for a simulation HTTP API.
 //
 // Here is an example of creating a 2 node network with the first node
@@ -31,7 +47,7 @@ import (
 
 	"github.com/ionchain/ionchain-core/crypto"
 	"github.com/ionchain/ionchain-core/p2p"
-	"github.com/ionchain/ionchain-core/p2p/discover"
+	"github.com/ionchain/ionchain-core/p2p/enode"
 	"github.com/ionchain/ionchain-core/p2p/simulations"
 	"github.com/ionchain/ionchain-core/p2p/simulations/adapters"
 	"github.com/ionchain/ionchain-core/rpc"
@@ -164,7 +180,10 @@ func main() {
 			},
 		},
 	}
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 }
 
 func showNetwork(ctx *cli.Context) error {
@@ -259,19 +278,18 @@ func createNode(ctx *cli.Context) error {
 	if len(ctx.Args()) != 0 {
 		return cli.ShowCommandHelp(ctx, ctx.Command.Name)
 	}
-	config := &adapters.NodeConfig{
-		Name: ctx.String("name"),
-	}
+	config := adapters.RandomNodeConfig()
+	config.Name = ctx.String("name")
 	if key := ctx.String("key"); key != "" {
 		privKey, err := crypto.HexToECDSA(key)
 		if err != nil {
 			return err
 		}
-		config.ID = discover.PubkeyID(&privKey.PublicKey)
+		config.ID = enode.PubkeyToIDV4(&privKey.PublicKey)
 		config.PrivateKey = privKey
 	}
 	if services := ctx.String("services"); services != "" {
-		config.Services = strings.Split(services, ",")
+		config.Lifecycles = strings.Split(services, ",")
 	}
 	node, err := client.CreateNode(config)
 	if err != nil {

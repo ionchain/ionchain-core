@@ -9,7 +9,7 @@
 // go-ionchain is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU General Pubtlic License for more details.
+// GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
 // along with go-ionchain. If not, see <http://www.gnu.org/licenses/>.
@@ -20,19 +20,18 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"reflect"
 	"unicode"
 
-	cli "gopkg.in/urfave/cli.v1"
+	"gopkg.in/urfave/cli.v1"
 
 	"github.com/ionchain/ionchain-core/cmd/utils"
-	"github.com/ionchain/ionchain-core/dashboard"
 	"github.com/ionchain/ionchain-core/ionc"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
+	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/node"
 	"github.com/ionchain/ionchain-core/params"
-	whisper "github.com/ionchain/ionchain-core/whisper/whisperv5"
 	"github.com/naoina/toml"
 )
 
@@ -74,15 +73,24 @@ type ethstatsConfig struct {
 	URL string `toml:",omitempty"`
 }
 
-type gethConfig struct {
-	Eth       ionc.Config
-	Shh       whisper.Config
-	Node      node.Config
-	Ethstats  ethstatsConfig
-	Dashboard dashboard.Config
+// whisper has been deprecated, but clients out there might still have [Shh]
+// in their config, which will crash. Cut them some slack by keeping the
+// config, and displaying a message that those config switches are ineffectual.
+// To be removed circa Q1 2021 -- @gballet.
+type whisperDeprecatedConfig struct {
+	MaxMessageSize                        uint32  `toml:",omitempty"`
+	MinimumAcceptedPOW                    float64 `toml:",omitempty"`
+	RestrictConnectionBetweenLightClients bool    `toml:",omitempty"`
 }
 
-func loadConfig(file string, cfg *gethConfig) error {
+type ioncConfig struct {
+	Eth      ionc.Config
+	Shh      whisperDeprecatedConfig
+	Node     node.Config
+	Ethstats ethstatsConfig
+}
+
+func loadConfig(file string, cfg *ioncConfig) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -100,26 +108,29 @@ func loadConfig(file string, cfg *gethConfig) error {
 func defaultNodeConfig() node.Config {
 	cfg := node.DefaultConfig
 	cfg.Name = clientIdentifier
-	cfg.Version = params.VersionWithCommit(gitCommit)
-	cfg.HTTPModules = append(cfg.HTTPModules, "ionc","eth", "shh")
-	cfg.WSModules = append(cfg.WSModules, "ionc","eth", "shh")
+	cfg.Version = params.VersionWithCommit(gitCommit, gitDate)
+	cfg.HTTPModules = append(cfg.HTTPModules, "ionc")
+	cfg.WSModules = append(cfg.WSModules, "ionc")
 	cfg.IPCPath = "ionc.ipc"
 	return cfg
 }
 
-func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
+// makeConfigNode loads ionc configuration and creates a blank node instance.
+func makeConfigNode(ctx *cli.Context) (*node.Node, ioncConfig) {
 	// Load defaults.
-	cfg := gethConfig{
-		Eth:       ionc.DefaultConfig,
-		Shh:       whisper.DefaultConfig,
-		Node:      defaultNodeConfig(),
-		Dashboard: dashboard.DefaultConfig,
+	cfg := ioncConfig{
+		Eth:  ionc.DefaultConfig,
+		Node: defaultNodeConfig(),
 	}
 
 	// Load config file.
 	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
+		}
+
+		if cfg.Shh != (whisperDeprecatedConfig{}) {
+			log.Warn("Deprecated whisper config detected. Whisper has been moved to github.com/ethereum/whisper")
 		}
 	}
 
@@ -133,51 +144,36 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, gethConfig) {
 	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
-
-	utils.SetShhConfig(ctx, stack, &cfg.Shh)
-	utils.SetDashboardConfig(ctx, &cfg.Dashboard)
+	utils.SetShhConfig(ctx, stack)
 
 	return stack, cfg
 }
 
 // enableWhisper returns true in case one of the whisper flags is set.
-func enableWhisper(ctx *cli.Context) bool {
+func checkWhisper(ctx *cli.Context) {
 	for _, flag := range whisperFlags {
 		if ctx.GlobalIsSet(flag.GetName()) {
-			return true
+			log.Warn("deprecated whisper flag detected. Whisper has been moved to github.com/ethereum/whisper")
 		}
 	}
-	return false
 }
 
-func makeFullNode(ctx *cli.Context) *node.Node {
+// makeFullNode loads ionc configuration and creates the IonChain backend.
+func makeFullNode(ctx *cli.Context) (*node.Node, ioncapi.Backend) {
 	stack, cfg := makeConfigNode(ctx)
 
-	// 向stack中加入以太坊客户端
-	utils.RegisterEthService(stack, &cfg.Eth)
+	backend := utils.RegisterEthService(stack, &cfg.Eth)
 
-	if ctx.GlobalBool(utils.DashboardEnabledFlag.Name) {
-		utils.RegisterDashboardService(stack, &cfg.Dashboard)
+	checkWhisper(ctx)
+	// Configure GraphQL if requested
+	if ctx.GlobalIsSet(utils.GraphQLEnabledFlag.Name) {
+		utils.RegisterGraphQLService(stack, backend, cfg.Node)
 	}
-	// Whisper must be explicitly enabled by specifying at least 1 whisper flag or in dev mode
-	shhEnabled := enableWhisper(ctx)
-	shhAutoEnabled := !ctx.GlobalIsSet(utils.WhisperEnabledFlag.Name) && ctx.GlobalIsSet(utils.DeveloperFlag.Name)
-	if shhEnabled || shhAutoEnabled {
-		if ctx.GlobalIsSet(utils.WhisperMaxMessageSizeFlag.Name) {
-			cfg.Shh.MaxMessageSize = uint32(ctx.Int(utils.WhisperMaxMessageSizeFlag.Name))
-		}
-		if ctx.GlobalIsSet(utils.WhisperMinPOWFlag.Name) {
-			cfg.Shh.MinimumAcceptedPOW = ctx.Float64(utils.WhisperMinPOWFlag.Name)
-		}
-		utils.RegisterShhService(stack, &cfg.Shh)
-	}
-
-	// Add the ionchain Stats daemon if requested.
+	// Add the IonChain Stats daemon if requested.
 	if cfg.Ethstats.URL != "" {
-		utils.RegisterEthStatsService(stack, cfg.Ethstats.URL)
+		utils.RegisterEthStatsService(stack, backend, cfg.Ethstats.URL)
 	}
-
-	return stack
+	return stack, backend
 }
 
 // dumpConfig is the dumpconfig command.
@@ -194,7 +190,17 @@ func dumpConfig(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	io.WriteString(os.Stdout, comment)
-	os.Stdout.Write(out)
+
+	dump := os.Stdout
+	if ctx.NArg() > 0 {
+		dump, err = os.OpenFile(ctx.Args().Get(0), os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer dump.Close()
+	}
+	dump.WriteString(comment)
+	dump.Write(out)
+
 	return nil
 }

@@ -14,10 +14,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ionchain library. If not, see <http://www.gnu.org/licenses/>.
 
-// Package abi implements the ionchain ABI (Application Binary
+// Package abi implements the IonChain ABI (Application Binary
 // Interface).
 //
-// The ionchain ABI is strongly typed, known at compile time
+// The IonChain ABI is strongly typed, known at compile time
 // and static. This ABI will handle basic type casting; unsigned
 // to signed and visa versa. It does not handle slice casting such
 // as unsigned slice to signed slice. Bit size type casting is also

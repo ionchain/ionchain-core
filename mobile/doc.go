@@ -16,7 +16,7 @@
 
 // Package ionc contains the simplified mobile APIs to go-ionchain.
 //
-// The scope of this package is *not* to allow writing a custom ionchain client
+// The scope of this package is *not* to allow writing a custom IonChain client
 // with pieces plucked from go-ionchain, rather to allow writing native dapps on
 // mobile platforms. Keep this in mind when using or extending this package!
 //
@@ -24,7 +24,7 @@
 //
 // Since gomobile cannot bridge arbitrary types between Go and Android/iOS, the
 // exposed APIs need to be manually wrapped into simplified types, with custom
-// constructors and getters/setters to ensure that they can be meaninfully used
+// constructors and getters/setters to ensure that they can be meaningfully used
 // from Java/ObjC too.
 //
 // With this in mind, please try to limit the scope of this package and only add

@@ -1,4 +1,4 @@
-// Copyright 2015 The go-ionchain Authors
+// Copyright 2017 The go-ionchain Authors
 // This file is part of the go-ionchain library.
 //
 // The go-ionchain library is free software: you can redistribute it and/or modify

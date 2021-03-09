@@ -20,22 +20,23 @@ import (
 	"bytes"
 
 	"github.com/ionchain/ionchain-core/common"
+	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/rlp"
 	"github.com/ionchain/ionchain-core/trie"
 )
 
 // NewStateSync create a new state trie download scheduler.
-func NewStateSync(root common.Hash, database trie.DatabaseReader) *trie.TrieSync {
-	var syncer *trie.TrieSync
-	callback := func(leaf []byte, parent common.Hash) error {
+func NewStateSync(root common.Hash, database ioncdb.KeyValueReader, bloom *trie.SyncBloom) *trie.Sync {
+	var syncer *trie.Sync
+	callback := func(path []byte, leaf []byte, parent common.Hash) error {
 		var obj Account
 		if err := rlp.Decode(bytes.NewReader(leaf), &obj); err != nil {
 			return err
 		}
-		syncer.AddSubTrie(obj.Root, 64, parent, nil)
-		syncer.AddRawEntry(common.BytesToHash(obj.CodeHash), 64, parent)
+		syncer.AddSubTrie(obj.Root, path, parent, nil)
+		syncer.AddCodeEntry(common.BytesToHash(obj.CodeHash), path, parent)
 		return nil
 	}
-	syncer = trie.NewTrieSync(root, database, callback)
+	syncer = trie.NewSync(root, database, callback, bloom)
 	return syncer
 }

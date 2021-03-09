@@ -66,23 +66,6 @@ func (n *Node) addr() *net.UDPAddr {
 	return &net.UDPAddr{IP: n.IP, Port: int(n.UDP)}
 }
 
-func (n *Node) setAddr(a *net.UDPAddr) {
-	n.IP = a.IP
-	if ipv4 := a.IP.To4(); ipv4 != nil {
-		n.IP = ipv4
-	}
-	n.UDP = uint16(a.Port)
-}
-
-// compares the given address against the stored values.
-func (n *Node) addrEqual(a *net.UDPAddr) bool {
-	ip := a.IP
-	if ipv4 := a.IP.To4(); ipv4 != nil {
-		ip = ipv4
-	}
-	return n.UDP == uint16(a.Port) && n.IP.Equal(ip)
-}
-
 // Incomplete returns true for nodes with no IP address.
 func (n *Node) Incomplete() bool {
 	return n.IP == nil
@@ -273,6 +256,11 @@ func (n NodeID) GoString() string {
 	return fmt.Sprintf("discover.HexID(\"%x\")", n[:])
 }
 
+// TerminalString returns a shortened hex string for terminal logging.
+func (n NodeID) TerminalString() string {
+	return hex.EncodeToString(n[:8])
+}
+
 // HexID converts a hex string to a NodeID.
 // The string may be prefixed with 0x.
 func HexID(in string) (NodeID, error) {
@@ -310,23 +298,15 @@ func PubkeyID(pub *ecdsa.PublicKey) NodeID {
 
 // Pubkey returns the public key represented by the node ID.
 // It returns an error if the ID is not a point on the curve.
-func (id NodeID) Pubkey() (*ecdsa.PublicKey, error) {
+func (n NodeID) Pubkey() (*ecdsa.PublicKey, error) {
 	p := &ecdsa.PublicKey{Curve: crypto.S256(), X: new(big.Int), Y: new(big.Int)}
-	half := len(id) / 2
-	p.X.SetBytes(id[:half])
-	p.Y.SetBytes(id[half:])
+	half := len(n) / 2
+	p.X.SetBytes(n[:half])
+	p.Y.SetBytes(n[half:])
 	if !p.Curve.IsOnCurve(p.X, p.Y) {
 		return nil, errors.New("id is invalid secp256k1 curve point")
 	}
 	return p, nil
-}
-
-func (id NodeID) mustPubkey() ecdsa.PublicKey {
-	pk, err := id.Pubkey()
-	if err != nil {
-		panic(err)
-	}
-	return *pk
 }
 
 // recoverNodeID computes the public key used to sign the

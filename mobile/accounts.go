@@ -210,7 +210,7 @@ func (ks *KeyStore) ImportECDSAKey(key []byte, passphrase string) (account *Acco
 	return &Account{acc}, nil
 }
 
-// ImportPreSaleKey decrypts the given ionchain presale wallet and stores
+// ImportPreSaleKey decrypts the given IonChain presale wallet and stores
 // a key file in the key directory. The key file is encrypted with the same passphrase.
 func (ks *KeyStore) ImportPreSaleKey(keyJSON []byte, passphrase string) (ccount *Account, _ error) {
 	account, err := ks.keystore.ImportPreSaleKey(common.CopyBytes(keyJSON), passphrase)

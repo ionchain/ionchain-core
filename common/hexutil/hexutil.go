@@ -16,7 +16,7 @@
 
 /*
 Package hexutil implements hex encoding with 0x prefix.
-This encoding is used by the Ethereum RPC API to transport binary data in JSON payloads.
+This encoding is used by the IonChain RPC API to transport binary data in JSON payloads.
 
 Encoding Rules
 
@@ -39,6 +39,7 @@ import (
 
 const uintBits = 32 << (uint64(^uint(0)) >> 63)
 
+// Errors
 var (
 	ErrEmptyString   = &decError{"empty hex string"}
 	ErrSyntax        = &decError{"invalid hex string"}
