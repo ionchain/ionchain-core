@@ -24,8 +24,9 @@ build/_vendor/pkg
 
 # used by the Makefile
 /build/_workspace/
+/build/cache/
 /build/bin/
-/geth*.zip
+/ionc*.zip
 
 # travis
 profile.tmp
@@ -35,6 +36,11 @@ profile.cov
 .idea
 
 # dashboard
+/dashboard/assets/flow-typed
 /dashboard/assets/node_modules
 /dashboard/assets/stats.json
-/dashboard/assets/public/bundle.js
+/dashboard/assets/bundle.js
+/dashboard/assets/bundle.js.map
+/dashboard/assets/package-lock.json
+
+**/yarn-error.log
