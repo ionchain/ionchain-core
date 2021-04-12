@@ -39,8 +39,8 @@ import (
 // Node is a container on which services can be registered.
 type Node struct {
 	eventmux      *event.TypeMux
-	config        *Config
-	accman        *accounts.Manager
+	config        *Config//配置
+	accman        *accounts.Manager //账号管理器
 	log           log.Logger
 	ephemKeystore string            // if non-empty, the key directory that will be removed by Stop
 	dirLock       fileutil.Releaser // prevents concurrent use of instance directory
@@ -159,7 +159,7 @@ func (n *Node) Start() error {
 		return ErrNodeStopped
 	}
 	n.state = runningState
-	err := n.startNetworking()
+	err := n.startNetworking()//创建p2p Server
 	lifecycles := make([]Lifecycle, len(n.lifecycles))
 	copy(lifecycles, n.lifecycles)
 	n.lock.Unlock()

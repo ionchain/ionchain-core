@@ -309,7 +309,7 @@ func (c *Console) Welcome() {
 		} catch (err) {}
 		message += "at block: " + eth.blockNumber + " (" + new Date(1000 * eth.getBlock(eth.blockNumber).timestamp) + ")\n";
 		try {
-			message += " datadir: " + admin.datadir + "\n";
+			message += "datadir: " + admin.datadir + "\n";
 		} catch (err) {}
 		message
 	`); err == nil {
@@ -322,7 +322,7 @@ func (c *Console) Welcome() {
 			modules = append(modules, fmt.Sprintf("%s:%s", api, version))
 		}
 		sort.Strings(modules)
-		message += " modules: " + strings.Join(modules, " ") + "\n"
+		message += "modules: " + strings.Join(modules, " ") + "\n"
 	}
 	message += "\nTo exit, press ctrl-d"
 	fmt.Fprintln(c.printer, message)

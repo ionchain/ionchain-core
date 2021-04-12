@@ -62,9 +62,9 @@ func (api *PublicIonchainAPI) Coinbase() (common.Address, error) {
 }
 
 // Hashrate returns the POW hashrate
-func (api *PublicIonchainAPI) Hashrate() hexutil.Uint64 {
-	return hexutil.Uint64(api.e.Miner().HashRate())
-}
+//func (api *PublicIonchainAPI) Hashrate() hexutil.Uint64 {
+//	return hexutil.Uint64(api.e.Miner().HashRate())
+//}
 
 // ChainId is the EIP-155 replay-protection chain id for the current ethereum chain config.
 func (api *PublicIonchainAPI) ChainId() hexutil.Uint64 {
@@ -150,9 +150,9 @@ func (api *PrivateMinerAPI) SetRecommitInterval(interval int) {
 }
 
 // GetHashrate returns the current hashrate of the miner.
-func (api *PrivateMinerAPI) GetHashrate() uint64 {
-	return api.e.miner.HashRate()
-}
+//func (api *PrivateMinerAPI) GetHashrate() uint64 {
+//	return api.e.miner.HashRate()
+//}
 
 // PrivateAdminAPI is the collection of IonChain full node-related APIs
 // exposed over the private admin endpoint.

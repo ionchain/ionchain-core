@@ -20,6 +20,7 @@ package utils
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ionchain/ionchain-core/consensus/ipos"
 	"io"
 	"io/ioutil"
 	"math/big"
@@ -31,25 +32,24 @@ import (
 	"text/template"
 	"time"
 
+	pcsclite "github.com/gballet/go-libpcsclite"
 	"github.com/ionchain/ionchain-core/accounts"
 	"github.com/ionchain/ionchain-core/accounts/keystore"
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/fdlimit"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/consensus/clique"
-	"github.com/ionchain/ionchain-core/consensus/ethash"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/rawdb"
 	"github.com/ionchain/ionchain-core/core/vm"
 	"github.com/ionchain/ionchain-core/crypto"
+	"github.com/ionchain/ionchain-core/graphql"
+	"github.com/ionchain/ionchain-core/internal/flags"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/ionc"
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ioncdb"
 	"github.com/ionchain/ionchain-core/ioncstats"
-	"github.com/ionchain/ionchain-core/graphql"
-	"github.com/ionchain/ionchain-core/internal/ioncapi"
-	"github.com/ionchain/ionchain-core/internal/flags"
 	"github.com/ionchain/ionchain-core/les"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/metrics"
@@ -63,7 +63,6 @@ import (
 	"github.com/ionchain/ionchain-core/p2p/nat"
 	"github.com/ionchain/ionchain-core/p2p/netutil"
 	"github.com/ionchain/ionchain-core/params"
-	pcsclite "github.com/gballet/go-libpcsclite"
 	"gopkg.in/urfave/cli.v1"
 )
 
@@ -251,7 +250,7 @@ var (
 		Name:  "light.nopruning",
 		Usage: "Disable ancient light chain data pruning",
 	}
-	// Ethash settings
+	/*// Ethash settings
 	EthashCacheDirFlag = DirectoryFlag{
 		Name:  "ethash.cachedir",
 		Usage: "Directory to store the ethash verification caches (default = inside the datadir)",
@@ -288,7 +287,7 @@ var (
 	EthashDatasetsLockMmapFlag = cli.BoolFlag{
 		Name:  "ethash.dagslockmmap",
 		Usage: "Lock memory maps for recent ethash mining DAGs",
-	}
+	}*/
 	// Transaction pool settings
 	TxPoolLocalsFlag = cli.StringFlag{
 		Name:  "txpool.locals",
@@ -473,10 +472,10 @@ var (
 		Name:  "ioncstats",
 		Usage: "Reporting URL of a ioncstats service (nodename:secret@host:port)",
 	}
-	FakePoWFlag = cli.BoolFlag{
+	/*FakePoWFlag = cli.BoolFlag{
 		Name:  "fakepow",
 		Usage: "Disables proof-of-work verification",
-	}
+	}*/
 	NoCompactionFlag = cli.BoolFlag{
 		Name:  "nocompaction",
 		Usage: "Disables db compaction after import",
@@ -897,11 +896,11 @@ func SplitAndTrim(input string) (ret []string) {
 // command line flags, returning empty if the HTTP endpoint is disabled.
 func setHTTP(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalBool(LegacyRPCEnabledFlag.Name) && cfg.HTTPHost == "" {
-		log.Warn("The flag --rpc is deprecated and will be removed in the future, please use --http")
+		//log.Warn("The flag --rpc is deprecated and will be removed in the future, please use --http")
 		cfg.HTTPHost = "127.0.0.1"
 		if ctx.GlobalIsSet(LegacyRPCListenAddrFlag.Name) {
 			cfg.HTTPHost = ctx.GlobalString(LegacyRPCListenAddrFlag.Name)
-			log.Warn("The flag --rpcaddr is deprecated and will be removed in the future, please use --http.addr")
+			//log.Warn("The flag --rpcaddr is deprecated and will be removed in the future, please use --http.addr")
 		}
 	}
 	if ctx.GlobalBool(HTTPEnabledFlag.Name) && cfg.HTTPHost == "" {
@@ -913,7 +912,7 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 
 	if ctx.GlobalIsSet(LegacyRPCPortFlag.Name) {
 		cfg.HTTPPort = ctx.GlobalInt(LegacyRPCPortFlag.Name)
-		log.Warn("The flag --rpcport is deprecated and will be removed in the future, please use --http.port")
+		//log.Warn("The flag --rpcport is deprecated and will be removed in the future, please use --http.port")
 	}
 	if ctx.GlobalIsSet(HTTPPortFlag.Name) {
 		cfg.HTTPPort = ctx.GlobalInt(HTTPPortFlag.Name)
@@ -921,7 +920,7 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 
 	if ctx.GlobalIsSet(LegacyRPCCORSDomainFlag.Name) {
 		cfg.HTTPCors = SplitAndTrim(ctx.GlobalString(LegacyRPCCORSDomainFlag.Name))
-		log.Warn("The flag --rpccorsdomain is deprecated and will be removed in the future, please use --http.corsdomain")
+		//log.Warn("The flag --rpccorsdomain is deprecated and will be removed in the future, please use --http.corsdomain")
 	}
 	if ctx.GlobalIsSet(HTTPCORSDomainFlag.Name) {
 		cfg.HTTPCors = SplitAndTrim(ctx.GlobalString(HTTPCORSDomainFlag.Name))
@@ -929,7 +928,7 @@ func setHTTP(ctx *cli.Context, cfg *node.Config) {
 
 	if ctx.GlobalIsSet(LegacyRPCApiFlag.Name) {
 		cfg.HTTPModules = SplitAndTrim(ctx.GlobalString(LegacyRPCApiFlag.Name))
-		log.Warn("The flag --rpcapi is deprecated and will be removed in the future, please use --http.api")
+		//log.Warn("The flag --rpcapi is deprecated and will be removed in the future, please use --http.api")
 	}
 	if ctx.GlobalIsSet(HTTPApiFlag.Name) {
 		cfg.HTTPModules = SplitAndTrim(ctx.GlobalString(HTTPApiFlag.Name))
@@ -1091,7 +1090,7 @@ func setEtherbase(ctx *cli.Context, ks *keystore.KeyStore, cfg *ionc.Config) {
 	var etherbase string
 	if ctx.GlobalIsSet(LegacyMinerEtherbaseFlag.Name) {
 		etherbase = ctx.GlobalString(LegacyMinerEtherbaseFlag.Name)
-		log.Warn("The flag --etherbase is deprecated and will be removed in the future, please use --miner.etherbase")
+		//log.Warn("The flag --etherbase is deprecated and will be removed in the future, please use --miner.etherbase")
 
 	}
 	if ctx.GlobalIsSet(MinerEtherbaseFlag.Name) {
@@ -1347,6 +1346,7 @@ func setTxPool(ctx *cli.Context, cfg *core.TxPoolConfig) {
 	}
 }
 
+/*
 func setEthash(ctx *cli.Context, cfg *ionc.Config) {
 	if ctx.GlobalIsSet(EthashCacheDirFlag.Name) {
 		cfg.Ethash.CacheDir = ctx.GlobalString(EthashCacheDirFlag.Name)
@@ -1372,7 +1372,7 @@ func setEthash(ctx *cli.Context, cfg *ionc.Config) {
 	if ctx.GlobalIsSet(EthashDatasetsLockMmapFlag.Name) {
 		cfg.Ethash.DatasetsLockMmap = ctx.GlobalBool(EthashDatasetsLockMmapFlag.Name)
 	}
-}
+}*/
 
 func setMiner(ctx *cli.Context, cfg *miner.Config) {
 	if ctx.GlobalIsSet(MinerNotifyFlag.Name) {
@@ -1484,8 +1484,8 @@ func SetShhConfig(ctx *cli.Context, stack *node.Node) {
 	}
 }
 
-// SetEthConfig applies ionc-related command line flags to the config.
-func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
+// SetIoncConfig applies ionc-related command line flags to the config.
+func SetIoncConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
 	// Avoid conflicting network flags
 	CheckExclusive(ctx, DeveloperFlag, LegacyTestnetFlag, RopstenFlag, RinkebyFlag, GoerliFlag, YoloV2Flag)
 	CheckExclusive(ctx, LegacyLightServFlag, LightServeFlag, SyncModeFlag, "light")
@@ -1502,8 +1502,8 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
 	setEtherbase(ctx, ks, cfg)
 	setGPO(ctx, &cfg.GPO, ctx.GlobalString(SyncModeFlag.Name) == "light")
 	setTxPool(ctx, &cfg.TxPool)
-	setEthash(ctx, cfg)
-	setMiner(ctx, &cfg.Miner)
+	//setEthash(ctx, cfg)
+	setMiner(ctx, &cfg.Miner)//设置矿工相关参数
 	setWhitelist(ctx, cfg)
 	setLes(ctx, cfg)
 
@@ -1620,7 +1620,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
 			cfg.NetworkId = 133519467574834 // "yolov2"
 		}
 		cfg.Genesis = core.DefaultYoloV2GenesisBlock()
-	case ctx.GlobalBool(DeveloperFlag.Name):
+	case ctx.GlobalBool(DeveloperFlag.Name)://dev模式下
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
 		}
@@ -1819,23 +1819,9 @@ func MakeChain(ctx *cli.Context, stack *node.Node, readOnly bool) (chain *core.B
 		Fatalf("%v", err)
 	}
 	var engine consensus.Engine
-	if config.Clique != nil {
-		engine = clique.New(config.Clique, chainDb)
-	} else {
-		engine = ethash.NewFaker()
-		if !ctx.GlobalBool(FakePoWFlag.Name) {
-			engine = ethash.New(ethash.Config{
-				CacheDir:         stack.ResolvePath(ionc.DefaultConfig.Ethash.CacheDir),
-				CachesInMem:      ionc.DefaultConfig.Ethash.CachesInMem,
-				CachesOnDisk:     ionc.DefaultConfig.Ethash.CachesOnDisk,
-				CachesLockMmap:   ionc.DefaultConfig.Ethash.CachesLockMmap,
-				DatasetDir:       stack.ResolvePath(ionc.DefaultConfig.Ethash.DatasetDir),
-				DatasetsInMem:    ionc.DefaultConfig.Ethash.DatasetsInMem,
-				DatasetsOnDisk:   ionc.DefaultConfig.Ethash.DatasetsOnDisk,
-				DatasetsLockMmap: ionc.DefaultConfig.Ethash.DatasetsLockMmap,
-			}, nil, false)
-		}
-	}
+
+	engine = ipos.New(chainDb, stack.IPCEndpoint())
+
 	if gcmode := ctx.GlobalString(GCModeFlag.Name); gcmode != "full" && gcmode != "archive" {
 		Fatalf("--%s must be either 'full' or 'archive'", GCModeFlag.Name)
 	}

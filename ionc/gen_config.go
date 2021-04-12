@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/ionchain/ionchain-core/common"
-	"github.com/ionchain/ionchain-core/consensus/ethash"
+	//"github.com/ionchain/ionchain-core/consensus/ethash"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
@@ -45,7 +45,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 		SnapshotCache           int
 		Preimages               bool
 		Miner                   miner.Config
-		Ethash                  ethash.Config
+		//Ethash                  ethash.Config
 		TxPool                  core.TxPoolConfig
 		GPO                     gasprice.Config
 		EnablePreimageRecording bool
@@ -86,7 +86,7 @@ func (c Config) MarshalTOML() (interface{}, error) {
 	enc.SnapshotCache = c.SnapshotCache
 	enc.Preimages = c.Preimages
 	enc.Miner = c.Miner
-	enc.Ethash = c.Ethash
+	//enc.Ethash = c.Ethash
 	enc.TxPool = c.TxPool
 	enc.GPO = c.GPO
 	enc.EnablePreimageRecording = c.EnablePreimageRecording
@@ -131,7 +131,7 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 		SnapshotCache           *int
 		Preimages               *bool
 		Miner                   *miner.Config
-		Ethash                  *ethash.Config
+		//Ethash                  *ethash.Config
 		TxPool                  *core.TxPoolConfig
 		GPO                     *gasprice.Config
 		EnablePreimageRecording *bool
@@ -231,9 +231,9 @@ func (c *Config) UnmarshalTOML(unmarshal func(interface{}) error) error {
 	if dec.Miner != nil {
 		c.Miner = *dec.Miner
 	}
-	if dec.Ethash != nil {
-		c.Ethash = *dec.Ethash
-	}
+	//if dec.Ethash != nil {
+	//	c.Ethash = *dec.Ethash
+	//}
 	if dec.TxPool != nil {
 		c.TxPool = *dec.TxPool
 	}

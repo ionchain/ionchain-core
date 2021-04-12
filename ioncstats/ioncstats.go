@@ -752,7 +752,7 @@ func (s *Service) reportStats(conn *connWrapper) error {
 	fullBackend, ok := s.backend.(fullNodeBackend)
 	if ok {
 		mining = fullBackend.Miner().Mining()
-		hashrate = int(fullBackend.Miner().HashRate())
+		//hashrate = int(fullBackend.Miner().HashRate())
 
 		sync := fullBackend.Downloader().Progress()
 		syncing = fullBackend.CurrentHeader().Number.Uint64() >= sync.HighestBlock

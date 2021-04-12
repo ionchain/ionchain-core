@@ -83,8 +83,11 @@ type Header struct {
 	GasUsed     uint64         `json:"gasUsed"          gencodec:"required"`
 	Time        uint64         `json:"timestamp"        gencodec:"required"`
 	Extra       []byte         `json:"extraData"        gencodec:"required"`
-	MixDigest   common.Hash    `json:"mixHash"`
-	Nonce       BlockNonce     `json:"nonce"`
+
+	//新增字段
+	BaseTarget          *big.Int `json:"baseTarget"              gencodec:"required"` // baseTarget
+	BlockSignature      []byte   `json:"blockSignature"          gencodec:"required"` // 区块签名信息
+	GenerationSignature []byte   `json:"generationSignature"     gencodec:"required"` // 生成签名信息
 }
 
 // field type overrides for gencodec
@@ -96,6 +99,10 @@ type headerMarshaling struct {
 	Time       hexutil.Uint64
 	Extra      hexutil.Bytes
 	Hash       common.Hash `json:"hash"` // adds call to Hash() in MarshalJSON
+
+	BaseTarget          *hexutil.Big
+	BlockSignature      hexutil.Bytes
+	GenerationSignature hexutil.Bytes
 }
 
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
@@ -328,9 +335,10 @@ func (b *Block) GasUsed() uint64      { return b.header.GasUsed }
 func (b *Block) Difficulty() *big.Int { return new(big.Int).Set(b.header.Difficulty) }
 func (b *Block) Time() uint64         { return b.header.Time }
 
-func (b *Block) NumberU64() uint64        { return b.header.Number.Uint64() }
-func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
-func (b *Block) Nonce() uint64            { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
+func (b *Block) NumberU64() uint64 { return b.header.Number.Uint64() }
+
+//func (b *Block) MixDigest() common.Hash   { return b.header.MixDigest }
+//func (b *Block) Nonce() uint64            { return binary.BigEndian.Uint64(b.header.Nonce[:]) }
 func (b *Block) Bloom() Bloom             { return b.header.Bloom }
 func (b *Block) Coinbase() common.Address { return b.header.Coinbase }
 func (b *Block) Root() common.Hash        { return b.header.Root }

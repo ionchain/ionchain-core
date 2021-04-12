@@ -23,7 +23,7 @@ import (
 
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/math"
-	"github.com/ionchain/ionchain-core/consensus/misc"
+	//"github.com/ionchain/ionchain-core/consensus/misc"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/rawdb"
 	"github.com/ionchain/ionchain-core/core/state"
@@ -122,11 +122,11 @@ func (pre *Prestate) Apply(vmConfig vm.Config, chainConfig *params.ChainConfig,
 	}
 	// If DAO is supported/enabled, we need to handle it here. In ionc 'proper', it's
 	// done in StateProcessor.Process(block, ...), right before transactions are applied.
-	if chainConfig.DAOForkSupport &&
-		chainConfig.DAOForkBlock != nil &&
-		chainConfig.DAOForkBlock.Cmp(new(big.Int).SetUint64(pre.Env.Number)) == 0 {
-		misc.ApplyDAOHardFork(statedb)
-	}
+	//if chainConfig.DAOForkSupport &&
+	//	chainConfig.DAOForkBlock != nil &&
+	//	chainConfig.DAOForkBlock.Cmp(new(big.Int).SetUint64(pre.Env.Number)) == 0 {
+	//	misc.ApplyDAOHardFork(statedb)
+	//}
 
 	for i, tx := range txs {
 		msg, err := tx.AsMessage(signer)

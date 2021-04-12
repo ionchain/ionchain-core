@@ -35,7 +35,7 @@ var (
 	consoleFlags = []cli.Flag{utils.JSpathFlag, utils.ExecFlag, utils.PreloadJSFlag}
 
 	consoleCommand = cli.Command{
-		Action:   utils.MigrateFlags(localConsole),
+		Action:   utils.MigrateFlags(localConsole),//启动参数加上console之后的入口
 		Name:     "console",
 		Usage:    "Start an interactive JavaScript environment",
 		Flags:    append(append(append(nodeFlags, rpcFlags...), consoleFlags...), whisperFlags...),
@@ -47,7 +47,7 @@ See https://github.com/ionchain/ionchain-core/wiki/Javascipt-Console.`,
 	}
 
 	attachCommand = cli.Command{
-		Action:    utils.MigrateFlags(remoteConsole),
+		Action:    utils.MigrateFlags(remoteConsole),//attach入口
 		Name:      "attach",
 		Usage:     "Start an interactive JavaScript environment (connect to node)",
 		ArgsUsage: "[endpoint]",

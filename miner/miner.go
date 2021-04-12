@@ -128,6 +128,7 @@ func (miner *Miner) update() {
 				events.Unsubscribe()
 			}
 		case addr := <-miner.startCh:
+			//fmt.Printf("在update方法中，miner.startCh接收到coinbase = %v ，然后调用worker.start()方法  \n", addr.String())
 			miner.SetEtherbase(addr)
 			if canStart {
 				miner.worker.start()
@@ -144,6 +145,7 @@ func (miner *Miner) update() {
 }
 
 func (miner *Miner) Start(coinbase common.Address) {
+	//fmt.Printf("进入 Start 方法,传递coinbase = %v 给startCh \n", coinbase.String())
 	miner.startCh <- coinbase
 }
 
@@ -159,12 +161,13 @@ func (miner *Miner) Mining() bool {
 	return miner.worker.isRunning()
 }
 
+/*
 func (miner *Miner) HashRate() uint64 {
 	if pow, ok := miner.engine.(consensus.PoW); ok {
 		return uint64(pow.Hashrate())
 	}
 	return 0
-}
+}*/
 
 func (miner *Miner) SetExtra(extra []byte) error {
 	if uint64(len(extra)) > params.MaximumExtraDataSize {

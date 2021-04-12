@@ -20,6 +20,7 @@ package ionc
 import (
 	"errors"
 	"fmt"
+	"github.com/ionchain/ionchain-core/consensus/ipos"
 	"math/big"
 	"runtime"
 	"sync"
@@ -29,19 +30,17 @@ import (
 	"github.com/ionchain/ionchain-core/common"
 	"github.com/ionchain/ionchain-core/common/hexutil"
 	"github.com/ionchain/ionchain-core/consensus"
-	"github.com/ionchain/ionchain-core/consensus/clique"
-	"github.com/ionchain/ionchain-core/consensus/ethash"
 	"github.com/ionchain/ionchain-core/core"
 	"github.com/ionchain/ionchain-core/core/bloombits"
 	"github.com/ionchain/ionchain-core/core/rawdb"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/core/vm"
+	"github.com/ionchain/ionchain-core/event"
+	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/ionc/downloader"
 	"github.com/ionchain/ionchain-core/ionc/filters"
 	"github.com/ionchain/ionchain-core/ionc/gasprice"
 	"github.com/ionchain/ionchain-core/ioncdb"
-	"github.com/ionchain/ionchain-core/event"
-	"github.com/ionchain/ionchain-core/internal/ioncapi"
 	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/miner"
 	"github.com/ionchain/ionchain-core/node"
@@ -124,12 +123,12 @@ func New(stack *node.Node, config *Config) (*IonChain, error) {
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
-	eth := &IonChain{
+	ionc := &IonChain{
 		config:            config,
 		chainDb:           chainDb,
 		eventMux:          stack.EventMux(),
 		accountManager:    stack.AccountManager(),
-		engine:            CreateConsensusEngine(stack, chainConfig, &config.Ethash, config.Miner.Notify, config.Miner.Noverify, chainDb),
+		engine:            CreateConsensusEngine(stack, chainConfig, config.Miner.Notify, config.Miner.Noverify, chainDb),
 		closeBloomHandler: make(chan struct{}),
 		networkID:         config.NetworkId,
 		gasPrice:          config.Miner.GasPrice,
@@ -172,22 +171,22 @@ func New(stack *node.Node, config *Config) (*IonChain, error) {
 			Preimages:           config.Preimages,
 		}
 	)
-	eth.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, eth.engine, vmConfig, eth.shouldPreserve, &config.TxLookupLimit)
+	ionc.blockchain, err = core.NewBlockChain(chainDb, cacheConfig, chainConfig, ionc.engine, vmConfig, ionc.shouldPreserve, &config.TxLookupLimit)
 	if err != nil {
 		return nil, err
 	}
 	// Rewind the chain in case of an incompatible config upgrade.
 	if compat, ok := genesisErr.(*params.ConfigCompatError); ok {
 		log.Warn("Rewinding chain to upgrade configuration", "err", compat)
-		eth.blockchain.SetHead(compat.RewindTo)
+		ionc.blockchain.SetHead(compat.RewindTo)
 		rawdb.WriteChainConfig(chainDb, genesisHash, chainConfig)
 	}
-	eth.bloomIndexer.Start(eth.blockchain)
+	ionc.bloomIndexer.Start(ionc.blockchain)
 
 	if config.TxPool.Journal != "" {
 		config.TxPool.Journal = stack.ResolvePath(config.TxPool.Journal)
 	}
-	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
+	ionc.txPool = core.NewTxPool(config.TxPool, chainConfig, ionc.blockchain)
 
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit + cacheConfig.SnapshotLimit
@@ -195,32 +194,33 @@ func New(stack *node.Node, config *Config) (*IonChain, error) {
 	if checkpoint == nil {
 		checkpoint = params.TrustedCheckpoints[genesisHash]
 	}
-	if eth.protocolManager, err = NewProtocolManager(chainConfig, checkpoint, config.SyncMode, config.NetworkId, eth.eventMux, eth.txPool, eth.engine, eth.blockchain, chainDb, cacheLimit, config.Whitelist); err != nil {
+	if ionc.protocolManager, err = NewProtocolManager(chainConfig, checkpoint, config.SyncMode, config.NetworkId, ionc.eventMux, ionc.txPool, ionc.engine, ionc.blockchain, chainDb, cacheLimit, config.Whitelist); err != nil {
 		return nil, err
 	}
-	eth.miner = miner.New(eth, &config.Miner, chainConfig, eth.EventMux(), eth.engine, eth.isLocalBlock)
-	eth.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
+	//创建矿工，创建完成后等待启动停止信号
+	ionc.miner = miner.New(ionc, &config.Miner, chainConfig, ionc.EventMux(), ionc.engine, ionc.isLocalBlock)
+	ionc.miner.SetExtra(makeExtraData(config.Miner.ExtraData))
 
-	eth.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), eth, nil}
+	ionc.APIBackend = &EthAPIBackend{stack.Config().ExtRPCEnabled(), ionc, nil}
 	gpoParams := config.GPO
 	if gpoParams.Default == nil {
 		gpoParams.Default = config.Miner.GasPrice
 	}
-	eth.APIBackend.gpo = gasprice.NewOracle(eth.APIBackend, gpoParams)
+	ionc.APIBackend.gpo = gasprice.NewOracle(ionc.APIBackend, gpoParams)
 
-	eth.dialCandidates, err = eth.setupDiscovery()
+	ionc.dialCandidates, err = ionc.setupDiscovery()
 	if err != nil {
 		return nil, err
 	}
 
 	// Start the RPC service
-	eth.netRPCService = ioncapi.NewPublicNetAPI(eth.p2pServer, eth.NetVersion())
+	ionc.netRPCService = ioncapi.NewPublicNetAPI(ionc.p2pServer, ionc.NetVersion())
 
 	// Register the backend on the node
-	stack.RegisterAPIs(eth.APIs())
-	stack.RegisterProtocols(eth.Protocols())
-	stack.RegisterLifecycle(eth)
-	return eth, nil
+	stack.RegisterAPIs(ionc.APIs())
+	stack.RegisterProtocols(ionc.Protocols())
+	stack.RegisterLifecycle(ionc)
+	return ionc, nil
 }
 
 func makeExtraData(extra []byte) []byte {
@@ -241,36 +241,8 @@ func makeExtraData(extra []byte) []byte {
 }
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an IonChain service
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ioncdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
-	}
-	// Otherwise assume proof-of-work
-	switch config.PowMode {
-	case ethash.ModeFake:
-		log.Warn("Ethash used in fake mode")
-		return ethash.NewFaker()
-	case ethash.ModeTest:
-		log.Warn("Ethash used in test mode")
-		return ethash.NewTester(nil, noverify)
-	case ethash.ModeShared:
-		log.Warn("Ethash used in shared mode")
-		return ethash.NewShared()
-	default:
-		engine := ethash.New(ethash.Config{
-			CacheDir:         stack.ResolvePath(config.CacheDir),
-			CachesInMem:      config.CachesInMem,
-			CachesOnDisk:     config.CachesOnDisk,
-			CachesLockMmap:   config.CachesLockMmap,
-			DatasetDir:       config.DatasetDir,
-			DatasetsInMem:    config.DatasetsInMem,
-			DatasetsOnDisk:   config.DatasetsOnDisk,
-			DatasetsLockMmap: config.DatasetsLockMmap,
-		}, notify, noverify)
-		engine.SetThreads(-1) // Disable CPU mining
-		return engine
-	}
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, notify []string, noverify bool, db ioncdb.Database) consensus.Engine {
+	return ipos.New(db, stack.IPCEndpoint())
 }
 
 // APIs return the collection of RPC services the ethereum package offers.
@@ -284,7 +256,7 @@ func (s *IonChain) APIs() []rpc.API {
 	// Append all the local APIs and return
 	return append(apis, []rpc.API{
 		{
-			Namespace: "eth",
+			Namespace: "eth",//控制台命令中的前半部分
 			Version:   "1.0",
 			Service:   NewPublicIonchainAPI(s),
 			Public:    true,
@@ -405,9 +377,6 @@ func (s *IonChain) shouldPreserve(block *types.Block) bool {
 	// is A, F and G sign the block of round5 and reject the block of opponents
 	// and in the round6, the last available signer B is offline, the whole
 	// network is stuck.
-	if _, ok := s.engine.(*clique.Clique); ok {
-		return false
-	}
 	return s.isLocalBlock(block)
 }
 
@@ -424,6 +393,7 @@ func (s *IonChain) SetEtherbase(etherbase common.Address) {
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
 func (s *IonChain) StartMining(threads int) error {
+	//fmt.Printf("进入 startMining 方法,开始挖矿 \n")
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)
@@ -449,13 +419,13 @@ func (s *IonChain) StartMining(threads int) error {
 			log.Error("Cannot start mining without etherbase", "err", err)
 			return fmt.Errorf("etherbase missing: %v", err)
 		}
-		if clique, ok := s.engine.(*clique.Clique); ok {
+		if ipos, ok := s.engine.(*ipos.IPos); ok {//ipos
 			wallet, err := s.accountManager.Find(accounts.Account{Address: eb})
 			if wallet == nil || err != nil {
 				log.Error("Etherbase account unavailable locally", "err", err)
 				return fmt.Errorf("signer missing: %v", err)
 			}
-			clique.Authorize(eb, wallet.SignData)
+			ipos.Authorize(eb, wallet.SignData)
 		}
 		// If mining is started, we can disable the transaction rejection mechanism
 		// introduced to speed sync times.
@@ -487,9 +457,9 @@ func (s *IonChain) AccountManager() *accounts.Manager  { return s.accountManager
 func (s *IonChain) BlockChain() *core.BlockChain       { return s.blockchain }
 func (s *IonChain) TxPool() *core.TxPool               { return s.txPool }
 func (s *IonChain) EventMux() *event.TypeMux           { return s.eventMux }
-func (s *IonChain) Engine() consensus.Engine { return s.engine }
-func (s *IonChain) ChainDb() ioncdb.Database { return s.chainDb }
-func (s *IonChain) IsListening() bool        { return true } // Always listening
+func (s *IonChain) Engine() consensus.Engine           { return s.engine }
+func (s *IonChain) ChainDb() ioncdb.Database           { return s.chainDb }
+func (s *IonChain) IsListening() bool                  { return true } // Always listening
 func (s *IonChain) EthVersion() int                    { return int(ProtocolVersions[0]) }
 func (s *IonChain) NetVersion() uint64                 { return s.networkID }
 func (s *IonChain) Downloader() *downloader.Downloader { return s.protocolManager.downloader }

@@ -158,7 +158,7 @@ The export-preimages command export hash preimages to an RLP encoded stream`,
 			utils.DataDirFlag,
 			utils.CacheFlag,
 			utils.SyncModeFlag,
-			utils.FakePoWFlag,
+			//utils.FakePoWFlag,
 			utils.RopstenFlag,
 			utils.RinkebyFlag,
 			utils.TxLookupLimitFlag,
@@ -508,7 +508,7 @@ func removeDB(ctx *cli.Context) error {
 		log.Info("Full node state database missing", "path", path)
 	}
 	// Remove the full node ancient database
-	path = config.Eth.DatabaseFreezer
+	path = config.Ionc.DatabaseFreezer
 	switch {
 	case path == "":
 		path = filepath.Join(stack.ResolvePath("chaindata"), "ancient")

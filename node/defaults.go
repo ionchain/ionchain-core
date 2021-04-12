@@ -38,7 +38,7 @@ const (
 
 // DefaultConfig contains reasonable default settings.
 var DefaultConfig = Config{
-	DataDir:             DefaultDataDir(),
+	DataDir:             DefaultDataDir(),//默认的数据存储路径
 	HTTPPort:            DefaultHTTPPort,
 	HTTPModules:         []string{"net", "web3"},
 	HTTPVirtualHosts:    []string{"localhost"},
@@ -73,7 +73,7 @@ func DefaultDataDir() string {
 			}
 			return filepath.Join(appdata, "IonChain")
 		default:
-			return filepath.Join(home, ".ethereum")
+			return filepath.Join(home, ".IonChain")
 		}
 	}
 	// As we cannot guess a stable location, return empty and handle later

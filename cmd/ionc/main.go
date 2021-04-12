@@ -69,14 +69,6 @@ var (
 		utils.ExternalSignerFlag,
 		utils.NoUSBFlag,
 		utils.SmartCardDaemonPathFlag,
-		utils.EthashCacheDirFlag,
-		utils.EthashCachesInMemoryFlag,
-		utils.EthashCachesOnDiskFlag,
-		utils.EthashCachesLockMmapFlag,
-		utils.EthashDatasetDirFlag,
-		utils.EthashDatasetsInMemoryFlag,
-		utils.EthashDatasetsOnDiskFlag,
-		utils.EthashDatasetsLockMmapFlag,
 		utils.TxPoolLocalsFlag,
 		utils.TxPoolNoLocalsFlag,
 		utils.TxPoolJournalFlag,
@@ -149,7 +141,6 @@ var (
 		utils.VMEnableDebugFlag,
 		utils.NetworkIdFlag,
 		utils.EthStatsURLFlag,
-		utils.FakePoWFlag,
 		utils.NoCompactionFlag,
 		utils.GpoBlocksFlag,
 		utils.LegacyGpoBlocksFlag,
@@ -218,7 +209,7 @@ func init() {
 	// Initialize the CLI app and start Ionc
 	app.Action = gionc
 	app.HideVersion = true // we have a command to print the version
-	app.Copyright = "Copyright 2013-2020 The go-ionchain Authors"
+	app.Copyright = "Copyright 2018-2021 The go-ionchain Authors"
 	app.Commands = []cli.Command{
 		// See chaincmd.go:
 		initCommand,
@@ -239,11 +230,11 @@ func init() {
 		attachCommand,
 		javascriptCommand,
 		// See misccmd.go:
-		makecacheCommand,
-		makedagCommand,
-		versionCommand,
-		versionCheckCommand,
-		licenseCommand,
+		//makecacheCommand,
+		//makedagCommand,
+		//versionCommand,
+		//versionCheckCommand,
+		//licenseCommand,
 		// See config.go
 		dumpConfigCommand,
 		// See cmd/utils/flags_legacy.go
@@ -345,13 +336,15 @@ func prepare(ctx *cli.Context) {
 // ionc is the main entry point into the system if no special subcommand is ran.
 // It creates a default node based on the command line arguments and runs it in
 // blocking mode, waiting for it to be shut down.
+// 程序没有加console参数时候的入口
 func gionc(ctx *cli.Context) error {
 	if args := ctx.Args(); len(args) > 0 {
 		return fmt.Errorf("invalid command: %q", args[0])
 	}
 
+	//检查运行环境及机器配置等
 	prepare(ctx)
-	stack, backend := makeFullNode(ctx)
+	stack, backend := makeFullNode(ctx)//stack就是node实例，backend是service
 	defer stack.Close()
 
 	startNode(ctx, stack, backend)
@@ -363,6 +356,7 @@ func gionc(ctx *cli.Context) error {
 // it unlocks any requested accounts, and starts the RPC/IPC interfaces and the
 // miner.
 // 启动系统节点和已注册的协议，启动后解锁账号，启动RPC/IPC接口，启动挖矿
+// 系统启动后，先执行makeFullNode,之后几个入口都会到这里来
 func startNode(ctx *cli.Context, stack *node.Node, backend ioncapi.Backend) {
 	debug.Memsize.Add("node", stack)
 
@@ -442,7 +436,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend ioncapi.Backend) {
 		}()
 	}
 
-	// Start auxiliary services if enabled
+	// Start auxiliary services if enabled 在启动参数中有--mine或者--dev参数的时候
 	if ctx.GlobalBool(utils.MiningEnabledFlag.Name) || ctx.GlobalBool(utils.DeveloperFlag.Name) {
 		// Mining only makes sense if a full IonChain node is running
 		if ctx.GlobalString(utils.SyncModeFlag.Name) == "light" {
@@ -465,7 +459,7 @@ func startNode(ctx *cli.Context, stack *node.Node, backend ioncapi.Backend) {
 			threads = ctx.GlobalInt(utils.LegacyMinerThreadsFlag.Name)
 			log.Warn("The flag --minerthreads is deprecated and will be removed in the future, please use --miner.threads")
 		}
-		if err := ethBackend.StartMining(threads); err != nil {
+		if err := ethBackend.StartMining(threads); err != nil {//开始挖矿
 			utils.Fatalf("Failed to start mining: %v", err)
 		}
 	}

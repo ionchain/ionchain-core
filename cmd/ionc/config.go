@@ -84,7 +84,7 @@ type whisperDeprecatedConfig struct {
 }
 
 type ioncConfig struct {
-	Eth      ionc.Config
+	Ionc     ionc.Config
 	Shh      whisperDeprecatedConfig
 	Node     node.Config
 	Ethstats ethstatsConfig
@@ -119,11 +119,11 @@ func defaultNodeConfig() node.Config {
 func makeConfigNode(ctx *cli.Context) (*node.Node, ioncConfig) {
 	// Load defaults.
 	cfg := ioncConfig{
-		Eth:  ionc.DefaultConfig,
-		Node: defaultNodeConfig(),
+		Ionc: ionc.DefaultConfig,  //ionc的config，默认的是快速同步模式
+		Node: defaultNodeConfig(), //node的config，默认的一些设置
 	}
 
-	// Load config file.
+	// Load config file.如果有config file的话，用configfile内的配置覆盖所有配置。
 	if file := ctx.GlobalString(configFileFlag.Name); file != "" {
 		if err := loadConfig(file, &cfg); err != nil {
 			utils.Fatalf("%v", err)
@@ -135,12 +135,12 @@ func makeConfigNode(ctx *cli.Context) (*node.Node, ioncConfig) {
 	}
 
 	// Apply flags.
-	utils.SetNodeConfig(ctx, &cfg.Node)
-	stack, err := node.New(&cfg.Node)
+	utils.SetNodeConfig(ctx, &cfg.Node) //检查是否有global的配置用来覆盖默认配置
+	stack, err := node.New(&cfg.Node)   //创建一个Node实例
 	if err != nil {
 		utils.Fatalf("Failed to create the protocol stack: %v", err)
 	}
-	utils.SetEthConfig(ctx, stack, &cfg.Eth)
+	utils.SetIoncConfig(ctx, stack, &cfg.Ionc)
 	if ctx.GlobalIsSet(utils.EthStatsURLFlag.Name) {
 		cfg.Ethstats.URL = ctx.GlobalString(utils.EthStatsURLFlag.Name)
 	}
@@ -160,9 +160,9 @@ func checkWhisper(ctx *cli.Context) {
 
 // makeFullNode loads ionc configuration and creates the IonChain backend.
 func makeFullNode(ctx *cli.Context) (*node.Node, ioncapi.Backend) {
-	stack, cfg := makeConfigNode(ctx)
+	stack, cfg := makeConfigNode(ctx) //配置节点
 
-	backend := utils.RegisterEthService(stack, &cfg.Eth)
+	backend := utils.RegisterEthService(stack, &cfg.Ionc) //注册ethService，矿工也是在这里注册的，然后等待start信号
 
 	checkWhisper(ctx)
 	// Configure GraphQL if requested
@@ -181,8 +181,8 @@ func dumpConfig(ctx *cli.Context) error {
 	_, cfg := makeConfigNode(ctx)
 	comment := ""
 
-	if cfg.Eth.Genesis != nil {
-		cfg.Eth.Genesis = nil
+	if cfg.Ionc.Genesis != nil {
+		cfg.Ionc.Genesis = nil
 		comment += "# Note: this config doesn't contain the genesis block.\n\n"
 	}
 

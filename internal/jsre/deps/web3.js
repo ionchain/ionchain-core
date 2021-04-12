@@ -2613,11 +2613,11 @@ var properties = function () {
             getter: 'eth_protocolVersion',
             inputFormatter: utils.toDecimal
         }),
-        new Property({
-            name: 'version.whisper',
-            getter: 'shh_version',
-            inputFormatter: utils.toDecimal
-        })
+        // new Property({
+        //     name: 'version.whisper',
+        //     getter: 'shh_version',
+        //     inputFormatter: utils.toDecimal
+        // })
     ];
 };
 
@@ -5469,11 +5469,11 @@ var properties = function () {
             name: 'mining',
             getter: 'eth_mining'
         }),
-        new Property({
-            name: 'hashrate',
-            getter: 'eth_hashrate',
-            outputFormatter: utils.toDecimal
-        }),
+        // new Property({
+        //     name: 'hashrate',
+        //     getter: 'eth_hashrate',
+        //     outputFormatter: utils.toDecimal
+        // }),
         new Property({
             name: 'syncing',
             getter: 'eth_syncing',
@@ -5973,14 +5973,14 @@ var methods = function () {
 
 var properties = function () {
     return [
-        new Property({
-            name: 'hive',
-            getter: 'bzz_hive'
-        }),
-        new Property({
-            name: 'info',
-            getter: 'bzz_info'
-        })
+        // new Property({
+        //     name: 'hive',
+        //     getter: 'bzz_hive'
+        // }),
+        // new Property({
+        //     name: 'info',
+        //     getter: 'bzz_info'
+        // })
     ];
 };
 
