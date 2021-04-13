@@ -612,9 +612,15 @@ func (c *IPos) getHitTime(chain consensus.ChainHeaderReader, header *types.Heade
 	// elapseTime = 一个hash值 / (父块baseTarget * 保证金)
 	elapseTime := new(big.Int).Div(hit, effectiveBaseTarget)
 	//fmt.Printf("number:%v ,elapseTime: %v , baseTarget=%v ,parentHeader.BaseTarget=%v ,effectiveBalance=%v , ", header.Number.Uint64(), elapseTime, header.BaseTarget.Uint64(), parentHeader.BaseTarget, effectiveBalance)
+	//fmt.Printf("getHitTime- hit= %v ,effectiveBaseTarget= %v ,elapseTime= %v \n", hit.Uint64(), effectiveBaseTarget.Uint64(), elapseTime)
 	// hitTime = 父块时间戳 + elapseTime
 	hitTime := new(big.Int).Add(new(big.Int).SetUint64(parentHeader.Time), elapseTime)
 	//fmt.Printf("getHitTime: hit=%v , effectiveBaseTarget=%v , elapseTime=%v , hitTime=%v \n", hit, effectiveBaseTarget, elapseTime, hitTime.Uint64())
+
+	//target := new(big.Int).Mul(effectiveBaseTarget, elapseTime)
+	//b := hit.Cmp(target) < 0
+	//fmt.Printf("verify: %v \n", b)
+
 	return hitTime //                  hit/(parentBaseTarget*抵押额) + parentTimeStamp
 }
 
@@ -637,23 +643,26 @@ func (c *IPos) verifyHit(chain consensus.ChainHeaderReader, header *types.Header
 	//target = 父块baseTarger * 保证金数量 * （当前区块时间 - 父块时间）
 	target := new(big.Int).Mul(effectiveBaseTarget, elapsedTime)
 	//target := new(big.Int).Set(prevTarget).Add(prevTarget, effectiveBaseTarget)
-
+	//fmt.Printf("verifyHit- hit= %v ,effectiveBaseTarget= %v ,target= %v \n", hit.Uint64(), effectiveBaseTarget.Uint64(), target.Uint64())
 	// 暂时注释
 	//return hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0)
 	//fmt.Printf("verifyHit: hit=%v , effectiveBaseTarget=%v , elapsedTime=%v , target=%v \n",hit,effectiveBaseTarget,elapsedTime,target)
+
+	//fmt.Printf("%v ,verifyHit- hit= %v ,effectiveBaseTarget= %v ,target= %v ,elapsedTime= %v \n", header.Number.Uint64(), hit.Uint64(), effectiveBaseTarget.Uint64(), target.Uint64(), elapsedTime)
+
 	return hit.Cmp(target) < 0
 }
 
 //调用合约查询生效的保证金是多少
 func (c *IPos) effectiveBalance(chain consensus.ChainHeaderReader, header *types.Header) (*big.Int, error) {
 
-	//balance, err := mintPower(header.Coinbase, c.IpcEndpoint)
-	//if err != nil {
-	//	return nil, err
-	//}
+	balance, err := mintPower(header.Coinbase, c.IpcEndpoint)
+	if err != nil {
+		return nil, err
+	}
 	//fmt.Printf("balance: %v \n", balance.Uint64())
-	//return balance, nil
-	return new(big.Int).SetInt64(1000000), nil
+	return balance, nil
+	//return new(big.Int).SetInt64(1000000), nil
 }
 
 //生成签名
@@ -700,24 +709,35 @@ func (c *IPos) Seal(chain consensus.ChainHeaderReader, block *types.Block, resul
 	var timeOut <-chan time.Time
 
 	headerTime := time.Unix(int64(header.Time), 0)
-	hitTime := c.getHitTime(chain, header) //hitTime是当前节点可以出块的最短时间戳
+	hitTime := c.getHitTime(chain, header) //hitTime是当前节点可以出块的最短时间
+
+	hitTime = hitTime.Add(hitTime, big.NewInt(1))
 
 	hTime := time.Unix(hitTime.Int64(), 0)
 
 	timeOut = time.After(hTime.Sub(headerTime))
 	//fmt.Printf("in Seal func hitTime = %v , timeOut = %v \n", hitTime.Int64(), hTime.Sub(headerTime).Seconds())
+
+	//fmt.Printf("%v ,parentTime: %v,hTime: %v,headerTime: %v \n",
+	//	header.Number.Uint64(),
+	//	chain.GetHeader(header.ParentHash, header.Number.Uint64()-1).Time,
+	//	hTime.Unix(), headerTime.Unix())
+
 Loop:
 	for {
 		select {
 		case <-stop:
+			//fmt.Printf("进入了stop \n")
 			return nil
 		case <-timeOut:
+			//fmt.Printf("超时 \n")
 			break Loop
 		}
 	}
 
 	// 判断出块权
 	if ok := c.verifyHit(chain, header); !ok {
+		//fmt.Printf("verifyHit failed \n")
 		return errUnableMine
 	}
 
