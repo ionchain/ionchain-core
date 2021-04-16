@@ -339,9 +339,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		timestamp   int64      // timestamp for each round of mining.
 	)
 
-	//timer := time.NewTimer(0)
-	//defer timer.Stop()
-	//<-timer.C // discard the initial tick
+	timer := time.NewTimer(0)
+	defer timer.Stop()
+	<-timer.C // discard the initial tick
 
 	// commit aborts in-flight transaction execution with given signal and resubmits a new one.
 	commit := func(noempty bool, s int32) {
@@ -349,10 +349,11 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			atomic.StoreInt32(interrupt, s)
 		}
 		interrupt = new(int32)
-		//fmt.Printf("进入匿名函数commit方法，传递给 newWorkCh消息  \n")
+		//fmt.Printf("进入匿名函数commit方法，传递给 newWorkCh消息1  interrupt: %v \n", *interrupt)
 
 		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
-		//timer.Reset(recommit)
+		//fmt.Printf("进入匿名函数commit方法，传递给 newWorkCh消息2  \n")
+		timer.Reset(recommit)
 		atomic.StoreInt32(&w.newTxs, 0)
 	}
 	// clearPending cleans the stale pending tasks.
@@ -380,18 +381,19 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
-		//case <-timer.C:
-		//	// If mining is running resubmit a new work cycle periodically to pull in
-		//	// higher priced transactions. Disable this overhead for pending blocks.
-		//	if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
-		//		// Short circuit if no new transaction arrives.
-		//		if atomic.LoadInt32(&w.newTxs) == 0 {
-		//			timer.Reset(recommit)
-		//			//continue
-		//		}
-		//		fmt.Printf("从timer.C进入commit方法 \n")
-		//		commit(true, commitInterruptResubmit)
-		//	}
+		case <-timer.C:
+			// If mining is running resubmit a new work cycle periodically to pull in
+			// higher priced transactions. Disable this overhead for pending blocks.
+			if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
+				// Short circuit if no new transaction arrives.
+				if atomic.LoadInt32(&w.newTxs) == 0 {
+					timer.Reset(recommit)
+					//continue
+				}
+				//fmt.Printf("从timer.C进入commit方法 \n")
+				timestamp = time.Now().Unix()
+				commit(true, commitInterruptResubmit)
+			}
 
 		case interval := <-w.resubmitIntervalCh:
 			// Adjust resubmit interval explicitly by user.
@@ -577,7 +579,7 @@ func (w *worker) taskLoop() {
 			w.pendingMu.Unlock()
 			//fmt.Println("before Seal \n")
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
-				w.startCh <- struct{}{}
+				//w.startCh <- struct{}{}
 				//fmt.Printf("Block sealing failed,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
 				log.Warn("Block sealing failed", "err", err)
 			}

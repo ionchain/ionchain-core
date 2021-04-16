@@ -660,7 +660,6 @@ func (c *IPos) effectiveBalance(chain consensus.ChainHeaderReader, header *types
 	if err != nil {
 		return nil, err
 	}
-	//fmt.Printf("balance: %v \n", balance.Uint64())
 	return balance, nil
 	//return new(big.Int).SetInt64(1000000), nil
 }
@@ -738,7 +737,7 @@ Loop:
 	// 判断出块权
 	if ok := c.verifyHit(chain, header); !ok {
 		//fmt.Printf("verifyHit failed \n")
-		return errUnableMine
+		return errUnableMineTime
 	}
 
 	number := header.Number.Uint64()

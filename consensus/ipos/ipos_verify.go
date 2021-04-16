@@ -30,7 +30,7 @@ var (
 	errInvalidBlockSignature      = errors.New("invalid block signature")
 	errInvalidGenerationSignature = errors.New("invalid generation signature")
 	errInvalidHit                 = errors.New("invalid hit")
-	errUnableMine                 = errors.New("unable mine block")
+	errUnableMineTime                 = errors.New("unable mine block time")
 )
 
 // CalcDifficulty is the difficulty adjustment algorithm. It returns

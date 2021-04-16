@@ -104,6 +104,7 @@ func (miner *Miner) update() {
 			}
 			switch ev.Data.(type) {
 			case downloader.StartEvent:
+				fmt.Printf("开始downloader.StartEvent \n")
 				wasMining := miner.Mining()
 				miner.worker.stop()
 				canStart = false
@@ -113,12 +114,14 @@ func (miner *Miner) update() {
 					log.Info("Mining aborted due to sync")
 				}
 			case downloader.FailedEvent:
+				//fmt.Printf("开始downloader.FailedEvent \n")
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
 					miner.worker.start()
 				}
 			case downloader.DoneEvent:
+				//fmt.Printf("开始downloader.DoneEvent \n")
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
