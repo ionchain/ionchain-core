@@ -104,7 +104,7 @@ func (miner *Miner) update() {
 			}
 			switch ev.Data.(type) {
 			case downloader.StartEvent:
-				fmt.Printf("开始downloader.StartEvent \n")
+				//fmt.Printf("开始downloader.StartEvent \n")
 				wasMining := miner.Mining()
 				miner.worker.stop()
 				canStart = false

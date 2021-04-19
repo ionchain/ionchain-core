@@ -392,7 +392,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 				}
 				//fmt.Printf("从timer.C进入commit方法 \n")
 				timestamp = time.Now().Unix()
-				commit(true, commitInterruptResubmit)
+				commit(true, commitInterruptNewHead)
 			}
 
 		case interval := <-w.resubmitIntervalCh:
