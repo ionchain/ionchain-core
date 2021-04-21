@@ -149,6 +149,8 @@ type worker struct {
 	resubmitIntervalCh chan time.Duration
 	resubmitAdjustCh   chan *intervalAdjust
 
+	sealErrorCh chan error
+
 	current      *environment                 // An environment for current running cycle.
 	localUncles  map[common.Hash]*types.Block // A set of side blocks generated locally as the possible uncle blocks.
 	remoteUncles map[common.Hash]*types.Block // A set of side blocks as the possible uncle blocks.
@@ -209,7 +211,10 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		startCh:            make(chan struct{}, 1),
 		resubmitIntervalCh: make(chan time.Duration),
 		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
-		noempty:            1, //
+
+		sealErrorCh: make(chan error),
+
+		noempty: 1, //
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
@@ -369,6 +374,12 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 	for {
 		select {
+		case msg := <-w.sealErrorCh:
+			log.Warn("Block sealing failed", "err", msg)
+			clearPending(w.chain.CurrentBlock().NumberU64())
+			timestamp = time.Now().Unix()
+			commit(false, commitInterruptNewHead)
+
 		case <-w.startCh:
 			//fmt.Printf("worker.startCh接收到消息，进入commit方法  \n")
 
@@ -377,6 +388,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			commit(false, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
+			//log.Info("接收到新区快11111111111111111111111111111111111 \n")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -388,11 +400,12 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 				// Short circuit if no new transaction arrives.
 				if atomic.LoadInt32(&w.newTxs) == 0 {
 					timer.Reset(recommit)
-					//continue
+					continue
 				}
 				//fmt.Printf("从timer.C进入commit方法 \n")
-				timestamp = time.Now().Unix()
-				commit(true, commitInterruptNewHead)
+				//timestamp = time.Now().Unix()
+				//commit(true, commitInterruptNewHead)
+				commit(true, commitInterruptResubmit)
 			}
 
 		case interval := <-w.resubmitIntervalCh:
@@ -543,7 +556,9 @@ func (w *worker) taskLoop() {
 
 	// interrupt aborts the in-flight sealing task.
 	interrupt := func() {
+		//fmt.Printf("进入interrupt \n")
 		if stopCh != nil {
+			//fmt.Printf("关闭了stopCh \n")
 			close(stopCh)
 			stopCh = nil
 		}
@@ -578,11 +593,12 @@ func (w *worker) taskLoop() {
 			//fmt.Printf("设置pendingTask后: %+v \n", w.pendingTasks)
 			w.pendingMu.Unlock()
 			//fmt.Println("before Seal \n")
-			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
-				//w.startCh <- struct{}{}
-				//fmt.Printf("Block sealing failed,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
-				log.Warn("Block sealing failed", "err", err)
-			}
+			//if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
+			//	w.startCh <- struct{}{}
+			//	//fmt.Printf("Block sealing failed,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
+			//	log.Warn("Block sealing failed", "err", err)
+			//}
+			go w.engine.Seal(w.chain, task.block, w.resultCh, stopCh, w.sealErrorCh)
 			//fmt.Printf("Block sealing success ,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
 		case <-w.exitCh:
 			interrupt()

@@ -700,7 +700,7 @@ func (c *IPos) blockSignature(chain consensus.ChainHeaderReader, header *types.H
 // the local signing credentials.
 // 尝试补全区块（nonce，签名）
 // 判断是否有出块权
-func (c *IPos) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (c *IPos) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}, errmsg chan error) {
 	//func (c *IPos) Seal(chain consensus.ChainHeaderReader, block *types.Block, stop <-chan struct{}) (*types.Block, error) {
 	header := block.Header()
 
@@ -726,8 +726,8 @@ Loop:
 	for {
 		select {
 		case <-stop:
-			//fmt.Printf("进入了stop \n")
-			return nil
+			//fmt.Printf("1111111111111111111111111111111111111111111111 \n")
+			return
 		case <-timeOut:
 			//fmt.Printf("超时 \n")
 			break Loop
@@ -737,12 +737,12 @@ Loop:
 	// 判断出块权
 	if ok := c.verifyHit(chain, header); !ok {
 		//fmt.Printf("verifyHit failed \n")
-		return errUnableMineTime
+		errmsg <- errUnableMineTime
 	}
 
 	number := header.Number.Uint64()
 	if number == 0 {
-		return errUnknownBlock
+		errmsg <- errUnknownBlock
 	}
 	// 计算baseTarget是否符合要求,校验hit
 
@@ -757,14 +757,14 @@ Loop:
 
 	sighash, err := c.blockSignature(chain, header)
 	if err != nil {
-		return err
+		errmsg <- err
 	}
 	header.BlockSignature = sighash
 	//fmt.Printf("在Seal中签名,head: %+v \n", header)
 	//fmt.Printf("给resultCh发送消息：header: %+v \n", header)
 	results <- block.WithSeal(header)
 
-	return nil
+
 }
 
 // APIs implements consensus.Engine, returning the user facing RPC API to allow
