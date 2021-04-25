@@ -11,6 +11,7 @@ import (
 	"github.com/ionchain/ionchain-core/core/state"
 	"github.com/ionchain/ionchain-core/core/types"
 	"github.com/ionchain/ionchain-core/ioncdb"
+	"github.com/ionchain/ionchain-core/log"
 	"github.com/ionchain/ionchain-core/params"
 	"github.com/ionchain/ionchain-core/rlp"
 	"github.com/ionchain/ionchain-core/rpc"
@@ -614,14 +615,13 @@ func (c *IPos) getHitTime(chain consensus.ChainHeaderReader, header *types.Heade
 	//fmt.Printf("number:%v ,elapseTime: %v , baseTarget=%v ,parentHeader.BaseTarget=%v ,effectiveBalance=%v , ", header.Number.Uint64(), elapseTime, header.BaseTarget.Uint64(), parentHeader.BaseTarget, effectiveBalance)
 	//fmt.Printf("getHitTime- hit= %v ,effectiveBaseTarget= %v ,elapseTime= %v \n", hit.Uint64(), effectiveBaseTarget.Uint64(), elapseTime)
 	// hitTime = 父块时间戳 + elapseTime
-	hitTime := new(big.Int).Add(new(big.Int).SetUint64(parentHeader.Time), elapseTime)
+	//hitTime := new(big.Int).Add(new(big.Int).SetUint64(parentHeader.Time), elapseTime)
 	//fmt.Printf("getHitTime: hit=%v , effectiveBaseTarget=%v , elapseTime=%v , hitTime=%v \n", hit, effectiveBaseTarget, elapseTime, hitTime.Uint64())
-
 	//target := new(big.Int).Mul(effectiveBaseTarget, elapseTime)
 	//b := hit.Cmp(target) < 0
 	//fmt.Printf("verify: %v \n", b)
 
-	return hitTime //                  hit/(parentBaseTarget*抵押额) + parentTimeStamp
+	return elapseTime //                  hit/(parentBaseTarget*抵押额) + parentTimeStamp
 }
 
 //校验难度及时间
@@ -709,34 +709,28 @@ func (c *IPos) Seal(chain consensus.ChainHeaderReader, block *types.Block, resul
 
 	headerTime := time.Unix(int64(header.Time), 0)
 	hitTime := c.getHitTime(chain, header) //hitTime是当前节点可以出块的最短时间
+	log.Info("Calculation hit time", "blockNumber", block.Number(), "hit", hitTime.Uint64())
+	parentHeader := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
-	hitTime = hitTime.Add(hitTime, big.NewInt(1))
+	hitTime = new(big.Int).Add(new(big.Int).SetUint64(parentHeader.Time), hitTime)
+	hitTime = hitTime.Add(hitTime, big.NewInt(1)) //+1
 
 	hTime := time.Unix(hitTime.Int64(), 0)
 
 	timeOut = time.After(hTime.Sub(headerTime))
-	//fmt.Printf("in Seal func hitTime = %v , timeOut = %v \n", hitTime.Int64(), hTime.Sub(headerTime).Seconds())
-
-	//fmt.Printf("%v ,parentTime: %v,hTime: %v,headerTime: %v \n",
-	//	header.Number.Uint64(),
-	//	chain.GetHeader(header.ParentHash, header.Number.Uint64()-1).Time,
-	//	hTime.Unix(), headerTime.Unix())
 
 Loop:
 	for {
 		select {
 		case <-stop:
-			//fmt.Printf("1111111111111111111111111111111111111111111111 \n")
 			return
 		case <-timeOut:
-			//fmt.Printf("超时 \n")
 			break Loop
 		}
 	}
 
 	// 判断出块权
 	if ok := c.verifyHit(chain, header); !ok {
-		//fmt.Printf("verifyHit failed \n")
 		errmsg <- errUnableMineTime
 	}
 
@@ -763,7 +757,6 @@ Loop:
 	//fmt.Printf("在Seal中签名,head: %+v \n", header)
 	//fmt.Printf("给resultCh发送消息：header: %+v \n", header)
 	results <- block.WithSeal(header)
-
 
 }
 
