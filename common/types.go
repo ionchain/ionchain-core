@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ionchain/ionchain-core/common/base58"
 	"math/big"
 	"math/rand"
 	"reflect"
@@ -38,7 +39,11 @@ const (
 	HashLength = 32
 	// AddressLength is the expected length of the address
 	AddressLength = 20
+	// DefaultLeftPad is the default address left pad
+	DefaultLeftPad = "IONC"
 )
+
+var AddressLeftPad = DefaultLeftPad
 
 var (
 	hashT    = reflect.TypeOf(Hash{})
@@ -225,6 +230,13 @@ func IsHexAddress(s string) bool {
 	return len(s) == 2*AddressLength && isHex(s)
 }
 
+// IsBase58Address verifies whether a string can represent a valid base58-encoded
+// IONC address or not.
+func IsBase58Address(s string) bool {
+	_, err := Base58ToAddress(s)
+	return err == nil
+}
+
 // Bytes gets the string representation of the underlying address.
 func (a Address) Bytes() []byte { return a[:] }
 
@@ -236,9 +248,53 @@ func (a Address) Hex() string {
 	return string(a.checksumHex())
 }
 
+func (a Address) Base58() string {
+	//var bytes [AddressLength + 1]byte
+	//bytes[0] = AddressLeftPad
+	//copy(bytes[1:], a[:])
+	if AddressLeftPad == "" {
+		AddressLeftPad = DefaultLeftPad
+	}
+	return AddressLeftPad + base58.CheckEncode(a[:])
+}
+
 // String implements fmt.Stringer.
 func (a Address) String() string {
-	return a.Hex()
+	//return a.Hex()
+	return a.Base58()
+}
+
+// MustBase58ToAddress returns Address with byte values of s.
+func MustBase58ToAddress(s string) Address {
+	addr, err := Base58ToAddress(s)
+	if err != nil {
+		panic(err)
+	}
+	return addr
+}
+
+// Base58ToAddress returns Address with byte values of s.
+func Base58ToAddress(s string) (Address, error) {
+	la := len(AddressLeftPad)
+	if s[0:la] != AddressLeftPad {
+		return Address{}, addressError("invalid left pad")
+	}
+
+	//原来的地址
+	bytes, err := base58.CheckDecode(s[la:])
+	if err != nil {
+		return Address{}, addressError(err)
+	}
+
+	if len(bytes) != AddressLength {
+		return Address{}, addressError("invalid length")
+	}
+
+	return BytesToAddress(bytes[:]), nil
+}
+
+func addressError(err interface{}) error {
+	return fmt.Errorf("invalid address: %v", err)
 }
 
 func (a *Address) checksumHex() []byte {

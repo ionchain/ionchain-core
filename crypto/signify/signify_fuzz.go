@@ -21,14 +21,12 @@ package signify
 import (
 	"bufio"
 	"fmt"
+	fuzz "github.com/google/gofuzz"
+	"github.com/jedisct1/go-minisign"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
-
-	fuzz "github.com/google/gofuzz"
-	"github.com/jedisct1/go-minisign"
 )
 
 func Fuzz(data []byte) int {
@@ -69,7 +67,7 @@ func Fuzz(data []byte) int {
 		signify = path
 	}
 
-	_, err := exec.LookPath(signify)
+	_, err = exec.LookPath(signify)
 	if err != nil {
 		panic(err)
 	}

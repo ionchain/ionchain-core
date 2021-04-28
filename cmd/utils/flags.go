@@ -1062,25 +1062,26 @@ func makeDatabaseHandles() int {
 // a key index in the key store to an internal account representation.
 func MakeAddress(ks *keystore.KeyStore, account string) (accounts.Account, error) {
 	// If the specified account is a valid address, return it
-	if common.IsHexAddress(account) {
-		return accounts.Account{Address: common.HexToAddress(account)}, nil
+	if common.IsBase58Address(account) {
+		return accounts.Account{Address: common.MustBase58ToAddress(account)}, nil
 	}
+	return accounts.Account{}, fmt.Errorf("invalid account address")
 	// Otherwise try to interpret the account as a keystore index
-	index, err := strconv.Atoi(account)
-	if err != nil || index < 0 {
-		return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
-	}
-	log.Warn("-------------------------------------------------------------------")
-	log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
-	log.Warn("This functionality is deprecated and will be removed in the future!")
-	log.Warn("Please use explicit addresses! (can search via `ionc account list`)")
-	log.Warn("-------------------------------------------------------------------")
-
-	accs := ks.Accounts()
-	if len(accs) <= index {
-		return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
-	}
-	return accs[index], nil
+	//index, err := strconv.Atoi(account)
+	//if err != nil || index < 0 {
+	//	return accounts.Account{}, fmt.Errorf("invalid account address or index %q", account)
+	//}
+	//log.Warn("-------------------------------------------------------------------")
+	//log.Warn("Referring to accounts by order in the keystore folder is dangerous!")
+	//log.Warn("This functionality is deprecated and will be removed in the future!")
+	//log.Warn("Please use explicit addresses! (can search via `ionc account list`)")
+	//log.Warn("-------------------------------------------------------------------")
+	//
+	//accs := ks.Accounts()
+	//if len(accs) <= index {
+	//	return accounts.Account{}, fmt.Errorf("index %d higher than number of accounts %d", index, len(accs))
+	//}
+	//return accs[index], nil
 }
 
 // setEtherbase retrieves the etherbase either from the directly specified
@@ -1503,7 +1504,7 @@ func SetIoncConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
 	setGPO(ctx, &cfg.GPO, ctx.GlobalString(SyncModeFlag.Name) == "light")
 	setTxPool(ctx, &cfg.TxPool)
 	//setEthash(ctx, cfg)
-	setMiner(ctx, &cfg.Miner)//设置矿工相关参数
+	setMiner(ctx, &cfg.Miner) //设置矿工相关参数
 	setWhitelist(ctx, cfg)
 	setLes(ctx, cfg)
 
@@ -1620,7 +1621,7 @@ func SetIoncConfig(ctx *cli.Context, stack *node.Node, cfg *ionc.Config) {
 			cfg.NetworkId = 133519467574834 // "yolov2"
 		}
 		cfg.Genesis = core.DefaultYoloV2GenesisBlock()
-	case ctx.GlobalBool(DeveloperFlag.Name)://dev模式下
+	case ctx.GlobalBool(DeveloperFlag.Name): //dev模式下
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkId = 1337
 		}

@@ -104,7 +104,6 @@ func (miner *Miner) update() {
 			}
 			switch ev.Data.(type) {
 			case downloader.StartEvent:
-				//fmt.Printf("开始downloader.StartEvent \n")
 				wasMining := miner.Mining()
 				miner.worker.stop()
 				canStart = false
@@ -114,14 +113,12 @@ func (miner *Miner) update() {
 					log.Info("Mining aborted due to sync")
 				}
 			case downloader.FailedEvent:
-				//fmt.Printf("开始downloader.FailedEvent \n")
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
 					miner.worker.start()
 				}
 			case downloader.DoneEvent:
-				//fmt.Printf("开始downloader.DoneEvent \n")
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
@@ -131,7 +128,6 @@ func (miner *Miner) update() {
 				events.Unsubscribe()
 			}
 		case addr := <-miner.startCh:
-			//fmt.Printf("在update方法中，miner.startCh接收到coinbase = %v ，然后调用worker.start()方法  \n", addr.String())
 			miner.SetEtherbase(addr)
 			if canStart {
 				miner.worker.start()
@@ -148,7 +144,6 @@ func (miner *Miner) update() {
 }
 
 func (miner *Miner) Start(coinbase common.Address) {
-	//fmt.Printf("进入 Start 方法,传递coinbase = %v 给startCh \n", coinbase.String())
 	miner.startCh <- coinbase
 }
 

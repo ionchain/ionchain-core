@@ -393,7 +393,6 @@ func (s *IonChain) SetEtherbase(etherbase common.Address) {
 // is already running, this method adjust the number of threads allowed to use
 // and updates the minimum price required by the transaction pool.
 func (s *IonChain) StartMining(threads int) error {
-	//fmt.Printf("进入 startMining 方法,开始挖矿 \n")
 	// Update the thread count within the consensus engine
 	type threaded interface {
 		SetThreads(threads int)

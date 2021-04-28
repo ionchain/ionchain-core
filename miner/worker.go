@@ -291,7 +291,6 @@ func (w *worker) pendingBlock() *types.Block {
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
-	//fmt.Printf("进入 start方法，给worker.startCh传递消息  \n")
 
 	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
@@ -354,10 +353,8 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			atomic.StoreInt32(interrupt, s)
 		}
 		interrupt = new(int32)
-		//fmt.Printf("进入匿名函数commit方法，传递给 newWorkCh消息1  interrupt: %v \n", *interrupt)
 
 		w.newWorkCh <- &newWorkReq{interrupt: interrupt, noempty: noempty, timestamp: timestamp}
-		//fmt.Printf("进入匿名函数commit方法，传递给 newWorkCh消息2  \n")
 		timer.Reset(recommit)
 		atomic.StoreInt32(&w.newTxs, 0)
 	}
@@ -381,14 +378,11 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			commit(false, commitInterruptNewHead)
 
 		case <-w.startCh:
-			//fmt.Printf("worker.startCh接收到消息，进入commit方法  \n")
-
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
 		case head := <-w.chainHeadCh:
-			//log.Info("接收到新区快11111111111111111111111111111111111 \n")
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
@@ -402,7 +396,6 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 					timer.Reset(recommit)
 					continue
 				}
-				//fmt.Printf("从timer.C进入commit方法 \n")
 				//timestamp = time.Now().Unix()
 				//commit(true, commitInterruptNewHead)
 				commit(true, commitInterruptResubmit)
@@ -453,7 +446,6 @@ func (w *worker) mainLoop() {
 	for {
 		select {
 		case req := <-w.newWorkCh:
-			//fmt.Printf("newWorkCh在mainLoop中，接收到消息，调用commitNewWork，就是这里可能会引发阻塞  \n")
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
 
 		case ev := <-w.chainSideCh:
@@ -556,9 +548,7 @@ func (w *worker) taskLoop() {
 
 	// interrupt aborts the in-flight sealing task.
 	interrupt := func() {
-		//fmt.Printf("进入interrupt \n")
 		if stopCh != nil {
-			//fmt.Printf("关闭了stopCh \n")
 			close(stopCh)
 			stopCh = nil
 		}
@@ -566,19 +556,13 @@ func (w *worker) taskLoop() {
 	for {
 		select {
 		case task := <-w.taskCh:
-			//fmt.Printf("在taskLoop中，taskCh接收到消息 ,heaser: %+v,,,,,blockNumber = %v \n", task.block.Header(), task.block.Number().Uint64())
 			//有新的挖矿任务进来了，只有显示的调用miner才会进行到这里
 			if w.newTaskHook != nil {
 				w.newTaskHook(task)
 			}
 			// Reject duplicate sealing work due to resubmitting.
 			//先生成一个区块头的hash，此时的hash并没有加上区块头中的新增字段,所以和后面校验hash的时候生成的hash不一样
-			//fmt.Printf("pendingTask之前的header: %+v \n", task.block.Header())
 			sealHash := w.engine.SealHash(task.block.Header())
-			//fmt.Printf("taskLoop 接收到消息,sealhash= %v \n", sealHash.String())
-			//if sealHash == prev {
-			//	continue
-			//}
 			// Interrupt previous sealing operation
 			interrupt()
 			//stopCh, prev = make(chan struct{}), sealHash
@@ -588,18 +572,13 @@ func (w *worker) taskLoop() {
 			}
 			w.pendingMu.Lock()
 			//hash和task以KV的方式存储进pendingTask中，并且会定期清除过期的task，后续用来校验该hash对应的task是否存在
-			//fmt.Printf("设置pendingTask前: %+v \n", w.pendingTasks)
 			w.pendingTasks[sealHash] = task
-			//fmt.Printf("设置pendingTask后: %+v \n", w.pendingTasks)
 			w.pendingMu.Unlock()
-			//fmt.Println("before Seal \n")
 			//if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 			//	w.startCh <- struct{}{}
-			//	//fmt.Printf("Block sealing failed,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
 			//	log.Warn("Block sealing failed", "err", err)
 			//}
 			go w.engine.Seal(w.chain, task.block, w.resultCh, stopCh, w.sealErrorCh)
-			//fmt.Printf("Block sealing success ,区块hash: %v ,区块号：%v, 包含交易数量：%v \n ", task.block.Hash().String(), task.block.Number().Uint64(), task.block.Transactions().Len())
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -613,7 +592,6 @@ func (w *worker) resultLoop() {
 	for {
 		select {
 		case block := <-w.resultCh:
-			//fmt.Printf("resultLoop的resultCh接收到消息:block.header: %+v \n", block.Header())
 			// Short circuit when receiving empty result.
 			if block == nil {
 				continue
@@ -632,11 +610,8 @@ func (w *worker) resultLoop() {
 			)
 			w.pendingMu.RLock()
 			task, exist := w.pendingTasks[sealhash]
-			//fmt.Printf("校验pendingTask: %+v \n", w.pendingTasks)
-			//fmt.Printf("校验pendingTask时的block: %+v \n", block.Header())
 			w.pendingMu.RUnlock()
 			if !exist {
-				//fmt.Printf("Block found but no relative pending task \n")
 				log.Error("Block found but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
 				continue
 			}
@@ -666,14 +641,12 @@ func (w *worker) resultLoop() {
 				log.Error("Failed writing block to chain", "err", err)
 				continue
 			}
-			//fmt.Printf("Successfully sealed new block,number=%v ,sealhash= %v ,hash = %v \n", block.Number(), sealhash, hash)
 			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash,
 				"elapsed", common.PrettyDuration(time.Since(task.createdAt)))
 			// Broadcast the block and announce chain insertion event
 			w.mux.Post(core.NewMinedBlockEvent{Block: block})
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
-			//fmt.Printf("到这里是执行完了 \n")
 
 		case <-w.exitCh:
 			return
@@ -984,15 +957,11 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	// Create an empty block based on temporary copied state for
 	// sealing in advance without waiting block execution finished.
 	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
-		//fmt.Printf("进入commitNewWork方法，第一次调用commit方法\n")
 		//w.commit(uncles, nil, false, tstart)
 	}
 
 	// Fill the block with all available pending transactions.
 	pending, err := w.eth.TxPool().Pending()
-	//for k, v := range pending {
-	//	fmt.Printf("txs== : address: %v ,tx: %v \n", k.String(), v[0].Hash().String())
-	//}
 	if err != nil {
 		log.Error("Failed to fetch pending transactions", "err", err)
 		return
@@ -1024,14 +993,12 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			return
 		}
 	}
-	//fmt.Printf("进入commitNewWork方法，调用commit方法,此时区块号= %v \n", header.Number.Uint64())
 	w.commit(uncles, w.fullTaskHook, true, tstart)
 }
 
 // commit runs any post-transaction state modifications, assembles the final block
 // and commits new work if consensus engine is running.
 func (w *worker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
-	//fmt.Printf("进入commit方法,")
 	// Deep copy receipts here to avoid interaction between different tasks.
 	receipts := copyReceipts(w.current.receipts)
 	s := w.current.state.Copy()
@@ -1046,7 +1013,6 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 		}
 		select {
 		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
-			//fmt.Printf("给taskCh发送消息,sealhash=%v  \n", w.engine.SealHash(block.Header()).String())
 			w.unconfirmed.Shift(block.NumberU64() - 1)
 			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
 				"uncles", len(uncles), "txs", w.current.tcount,

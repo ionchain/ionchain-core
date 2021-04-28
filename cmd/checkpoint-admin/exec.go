@@ -198,7 +198,7 @@ func sign(ctx *cli.Context) error {
 		return fmt.Errorf("signer %v is not the admin", addr.Hex())
 	}
 	// Print to the user the data thy are about to sign
-	fmt.Printf("Oracle     => %s\n", address.Hex())
+	fmt.Printf("Oracle     => %s\n", address.String())
 	fmt.Printf("Index %4d => %s\n", cindex, chash.Hex())
 
 	// Sign checkpoint in clef mode.

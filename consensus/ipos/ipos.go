@@ -176,7 +176,6 @@ func (c *IPos) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Hea
 	// Short circuit if the header is known, or it's parent not
 	// 验证header是否已存在，parent是否不存在
 	number := header.Number.Uint64()
-	//fmt.Printf("header:%+v \n", chain.GetHeader(header.Hash(), number))
 	if chain.GetHeader(header.Hash(), number) != nil {
 		return nil
 	}
@@ -194,7 +193,6 @@ func (c *IPos) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Hea
 // retrieve the async verifications (the order is that of the input slice).
 // 与VerifyHeader类似，批量校验区块头，返回 quit channel 用来取消操作，results channel 异步取出结果
 func (c *IPos) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
-	//fmt.Printf("VerifyHeaders,headerLength: %v \nseals:%+v \nchain:%+v\n", len(headers), seals, chain)
 
 	if len(headers) == 0 {
 		abort, results := make(chan struct{}), make(chan error, len(headers))
@@ -258,19 +256,13 @@ func (c *IPos) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types
 }
 
 func (c *IPos) verifyHeaderWorker(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool, index int) error {
-	//fmt.Printf("verifyHeaderWorker: len(headers): %v ,index: %v \n", len(headers), index)
 	var parent *types.Header
-	//if index != 0 {
-	//fmt.Printf("区块号： %v\n计算出来的父块hash： %v\n, header.ParentHash : %v \n\n", headers[index-1].Number.Uint64(),
-	//headers[index-1].Hash().String(), headers[index].ParentHash.String())
-	//}
 	if index == 0 {
 		parent = chain.GetHeader(headers[0].ParentHash, headers[0].Number.Uint64()-1)
 	} else if headers[index-1].Hash() == headers[index].ParentHash {
 		parent = headers[index-1]
 	}
 	if parent == nil {
-		//fmt.Printf("报错了\n ")
 		return consensus.ErrUnknownAncestor
 	}
 	if chain.GetHeader(headers[index].Hash(), headers[index].Number.Uint64()) != nil {
@@ -337,10 +329,6 @@ func (c *IPos) VerifySeal(chain consensus.ChainHeaderReader, header *types.Heade
 	if number == 0 {
 		return errUnknownBlock
 	}
-	//fmt.Printf("VerifySeal, number: %v \n", header.Number)
-
-	//fmt.Printf("%v,", header.Number)
-	//fmt.Printf("header: %+v \nheader.ParentHash: %v\n", header, header.ParentHash)
 
 	parent := chain.GetHeader(header.ParentHash, header.Number.Uint64()-1)
 
@@ -399,11 +387,9 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainHeaderReader, header *type
 	var max uint64
 	parentHeight := parent.Number.Uint64()
 	if parentHeight > 2 && parentHeight%2 == 0 {
-		//fmt.Printf("calcBaseTargetNew -- blockNumber: %v ", header.Number.Uint64())
 		prev1 := chain.GetHeader(parent.ParentHash, parent.Number.Uint64()-1)
 		prev2 := chain.GetHeader(prev1.ParentHash, prev1.Number.Uint64()-1)
 		blockTimeAverage := (header.Time - prev2.Time) / 3
-		//fmt.Printf("blockTimeAverage = %v ", blockTimeAverage)
 		if blockTimeAverage > BlockTime { // 出块速度变慢 ，将baseTarget调大使保证金小的人也可以出块
 			// 出块时间最大 MAX_BLOCKTIME_LIMIT
 			//if parent.UncleHash == types.EmptyUncleHash {
@@ -424,14 +410,11 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainHeaderReader, header *type
 			max = BlockTime - Max(blockTimeAverage, MinBlockTimeLimit)
 			//}
 
-			//fmt.Printf("max......... %d \n",max)
 			baseTarget = new(big.Int).Mul(prevBaseTarget, new(big.Int).SetUint64(max))
 			baseTarget = baseTarget.Mul(baseTarget, new(big.Int).SetUint64(BaseTargetGamma))
 			baseTarget = baseTarget.Div(baseTarget, new(big.Int).SetUint64(100*BlockTime))
 			baseTarget = new(big.Int).Sub(prevBaseTarget, baseTarget)
 			//baseTarget = prevBaseTarget - prevBaseTarget*BASE_TARGET_GAMMA*(BLOCK_TIME-Max(blockTimeAverage, MIN_BLOCKTIME_LIMIT))/(100*BLOCK_TIME);
-			//fmt.Printf("blockTimeAverage:%v ,prevBaseTarget:%v,newBaseTarget:%v \n", blockTimeAverage, prevBaseTarget, baseTarget)
-			//fmt.Printf(",maxBaseTarget:%v ,minBaseTarget=%v", MaxBaseTarget, MinBaseTarget)
 
 		}
 		// 暂时注释
@@ -445,7 +428,6 @@ func (c *IPos) calcBaseTargetNew(chain consensus.ChainHeaderReader, header *type
 	} else {
 		baseTarget = prevBaseTarget
 	}
-	//fmt.Printf("returnNewBaseTarget: %v \n", baseTarget.Uint64())
 
 	return baseTarget
 	//new
@@ -538,7 +520,6 @@ func (c *IPos) Prepare(chain consensus.ChainHeaderReader, header *types.Header) 
 	}
 
 	res := c.calcBaseTargetNew(chain, header)
-	//fmt.Printf(" Prepare---blockNumber: %v ,baseTarget: %v\n", header.Number.Uint64(), res.Uint64())
 	header.BaseTarget.Set(res)
 
 	// 更新难度
@@ -612,14 +593,10 @@ func (c *IPos) getHitTime(chain consensus.ChainHeaderReader, header *types.Heade
 	effectiveBaseTarget := new(big.Int).Mul(parentHeader.BaseTarget, effectiveBalance)
 	// elapseTime = 一个hash值 / (父块baseTarget * 保证金)
 	elapseTime := new(big.Int).Div(hit, effectiveBaseTarget)
-	//fmt.Printf("number:%v ,elapseTime: %v , baseTarget=%v ,parentHeader.BaseTarget=%v ,effectiveBalance=%v , ", header.Number.Uint64(), elapseTime, header.BaseTarget.Uint64(), parentHeader.BaseTarget, effectiveBalance)
-	//fmt.Printf("getHitTime- hit= %v ,effectiveBaseTarget= %v ,elapseTime= %v \n", hit.Uint64(), effectiveBaseTarget.Uint64(), elapseTime)
 	// hitTime = 父块时间戳 + elapseTime
 	//hitTime := new(big.Int).Add(new(big.Int).SetUint64(parentHeader.Time), elapseTime)
-	//fmt.Printf("getHitTime: hit=%v , effectiveBaseTarget=%v , elapseTime=%v , hitTime=%v \n", hit, effectiveBaseTarget, elapseTime, hitTime.Uint64())
 	//target := new(big.Int).Mul(effectiveBaseTarget, elapseTime)
 	//b := hit.Cmp(target) < 0
-	//fmt.Printf("verify: %v \n", b)
 
 	return elapseTime //                  hit/(parentBaseTarget*抵押额) + parentTimeStamp
 }
@@ -642,13 +619,6 @@ func (c *IPos) verifyHit(chain consensus.ChainHeaderReader, header *types.Header
 
 	//target = 父块baseTarger * 保证金数量 * （当前区块时间 - 父块时间）
 	target := new(big.Int).Mul(effectiveBaseTarget, elapsedTime)
-	//target := new(big.Int).Set(prevTarget).Add(prevTarget, effectiveBaseTarget)
-	//fmt.Printf("verifyHit- hit= %v ,effectiveBaseTarget= %v ,target= %v \n", hit.Uint64(), effectiveBaseTarget.Uint64(), target.Uint64())
-	// 暂时注释
-	//return hit.Cmp(target) < 0 && (hit.Cmp(prevTarget) >= 0 || elapsedTime.Cmp(timeOut) > 0)
-	//fmt.Printf("verifyHit: hit=%v , effectiveBaseTarget=%v , elapsedTime=%v , target=%v \n",hit,effectiveBaseTarget,elapsedTime,target)
-
-	//fmt.Printf("%v ,verifyHit- hit= %v ,effectiveBaseTarget= %v ,target= %v ,elapsedTime= %v \n", header.Number.Uint64(), hit.Uint64(), effectiveBaseTarget.Uint64(), target.Uint64(), elapsedTime)
 
 	return hit.Cmp(target) < 0
 }
@@ -754,8 +724,6 @@ Loop:
 		errmsg <- err
 	}
 	header.BlockSignature = sighash
-	//fmt.Printf("在Seal中签名,head: %+v \n", header)
-	//fmt.Printf("给resultCh发送消息：header: %+v \n", header)
 	results <- block.WithSeal(header)
 
 }
@@ -776,19 +744,8 @@ func (c *IPos) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, pa
 func (c *IPos) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 
-	//if c.signFn != nil {
-	//	//fmt.Printf("...signFn...\n")
-	//	header.GenerationSignature = c.generationSignature(chain, header)
-	//	sighash, err := c.blockSignature(chain, header)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	header.BlockSignature = sighash
-	//}
-	//fmt.Printf("在finalize中签名： header: %+v \n", header)
 	// Header seems complete, assemble into a block and return
 	b := types.NewBlock(header, txs, uncles, receipts, new(trie.Trie))
-	//fmt.Printf("after signFn b.header:%+v\n", b.Header())
 	return b, nil
 }
 

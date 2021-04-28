@@ -92,8 +92,6 @@ func (c *IPos) verifyBlockSignature(chain consensus.ChainHeaderReader, header *t
 }
 
 func (c *IPos)ecrecover(header *types.Header) (common.Address, error) {
-	//fmt.Printf("校验区块，header: %+v \n",header)
-	//fmt.Printf("校验区块，BlockSignature: %v \n",header.BlockSignature)
 	pubkey, err := crypto.Ecrecover(c.SealHash(header).Bytes(), header.BlockSignature) // 从签名信息中恢复出公钥
 
 	if err != nil {
