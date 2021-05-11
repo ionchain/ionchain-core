@@ -364,12 +364,18 @@ func (a *Address) SetBytes(b []byte) {
 
 // MarshalText returns the hex representation of a.
 func (a Address) MarshalText() ([]byte, error) {
-	return hexutil.Bytes(a[:]).MarshalText()
+	return []byte(a.Base58()), nil
+	//return hexutil.Bytes(a[:]).MarshalText()
 }
 
 // UnmarshalText parses a hash in hex syntax.
 func (a *Address) UnmarshalText(input []byte) error {
-	return hexutil.UnmarshalFixedText("Address", input, a[:])
+	addr, err := Base58ToAddress(string(input))
+	if err == nil {
+		*a = addr
+	}
+	return err
+	//return hexutil.UnmarshalFixedText("Address", input, a[:])
 }
 
 // UnmarshalJSON parses a hash in hex syntax.
