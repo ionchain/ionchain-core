@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	IPOSContractAddress = "0x0000000000000000000000000000000000000100"
+	IPOSContractAddress = "IONC11111111111111111112DHgZTF"
 )
 
 var ecClient *ioncclient.Client

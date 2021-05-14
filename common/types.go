@@ -249,9 +249,6 @@ func (a Address) Hex() string {
 }
 
 func (a Address) Base58() string {
-	//var bytes [AddressLength + 1]byte
-	//bytes[0] = AddressLeftPad
-	//copy(bytes[1:], a[:])
 	if AddressLeftPad == "" {
 		AddressLeftPad = DefaultLeftPad
 	}
@@ -380,7 +377,7 @@ func (a *Address) UnmarshalText(input []byte) error {
 
 // UnmarshalJSON parses a hash in hex syntax.
 func (a *Address) UnmarshalJSON(input []byte) error {
-	return hexutil.UnmarshalFixedJSON(addressT, input, a[:])
+	return hexutil.UnmarshalStringJSON(addressT, input, a.UnmarshalText)
 }
 
 // Scan implements Scanner for database/sql.
@@ -417,7 +414,7 @@ func (a *Address) UnmarshalGraphQL(input interface{}) error {
 }
 
 // UnprefixedAddress allows marshaling an Address without 0x prefix.
-type UnprefixedAddress Address
+/*type UnprefixedAddress Address
 
 // UnmarshalText decodes the address from hex. The 0x prefix is optional.
 func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
@@ -428,7 +425,7 @@ func (a *UnprefixedAddress) UnmarshalText(input []byte) error {
 func (a UnprefixedAddress) MarshalText() ([]byte, error) {
 	return []byte(hex.EncodeToString(a[:])), nil
 }
-
+*/
 // MixedcaseAddress retains the original string, which may or may not be
 // correctly checksummed
 type MixedcaseAddress struct {

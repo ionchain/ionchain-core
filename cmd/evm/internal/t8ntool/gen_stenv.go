@@ -16,7 +16,7 @@ var _ = (*stEnvMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (s stEnv) MarshalJSON() ([]byte, error) {
 	type stEnv struct {
-		Coinbase    common.UnprefixedAddress            `json:"currentCoinbase"   gencodec:"required"`
+		Coinbase    common.Address                      `json:"currentCoinbase"   gencodec:"required"`
 		Difficulty  *math.HexOrDecimal256               `json:"currentDifficulty" gencodec:"required"`
 		GasLimit    math.HexOrDecimal64                 `json:"currentGasLimit"   gencodec:"required"`
 		Number      math.HexOrDecimal64                 `json:"currentNumber"     gencodec:"required"`
@@ -25,7 +25,7 @@ func (s stEnv) MarshalJSON() ([]byte, error) {
 		Ommers      []ommer                             `json:"ommers,omitempty"`
 	}
 	var enc stEnv
-	enc.Coinbase = common.UnprefixedAddress(s.Coinbase)
+	enc.Coinbase = s.Coinbase
 	enc.Difficulty = (*math.HexOrDecimal256)(s.Difficulty)
 	enc.GasLimit = math.HexOrDecimal64(s.GasLimit)
 	enc.Number = math.HexOrDecimal64(s.Number)
@@ -38,7 +38,7 @@ func (s stEnv) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (s *stEnv) UnmarshalJSON(input []byte) error {
 	type stEnv struct {
-		Coinbase    *common.UnprefixedAddress           `json:"currentCoinbase"   gencodec:"required"`
+		Coinbase    *common.Address                     `json:"currentCoinbase"   gencodec:"required"`
 		Difficulty  *math.HexOrDecimal256               `json:"currentDifficulty" gencodec:"required"`
 		GasLimit    *math.HexOrDecimal64                `json:"currentGasLimit"   gencodec:"required"`
 		Number      *math.HexOrDecimal64                `json:"currentNumber"     gencodec:"required"`
@@ -53,7 +53,7 @@ func (s *stEnv) UnmarshalJSON(input []byte) error {
 	if dec.Coinbase == nil {
 		return errors.New("missing required field 'currentCoinbase' for stEnv")
 	}
-	s.Coinbase = common.Address(*dec.Coinbase)
+	s.Coinbase = *dec.Coinbase
 	if dec.Difficulty == nil {
 		return errors.New("missing required field 'currentDifficulty' for stEnv")
 	}

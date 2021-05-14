@@ -101,6 +101,13 @@ func UnmarshalFixedJSON(typ reflect.Type, input, out []byte) error {
 	return wrapTypeError(UnmarshalFixedText(typ.String(), input[1:len(input)-1], out), typ)
 }
 
+func UnmarshalStringJSON(typ reflect.Type, input []byte, unmarshal func([]byte) error) error {
+	if !isString(input) {
+		return errNonString(typ)
+	}
+	return wrapTypeError(unmarshal(input[1:len(input)-1]), typ)
+}
+
 // UnmarshalFixedText decodes the input as a string with 0x prefix. The length of out
 // determines the required input length. This function is commonly used to implement the
 // UnmarshalText method for fixed-size types.
