@@ -273,7 +273,7 @@ func MustBase58ToAddress(s string) Address {
 // Base58ToAddress returns Address with byte values of s.
 func Base58ToAddress(s string) (Address, error) {
 	la := len(AddressLeftPad)
-	if s[0:la] != AddressLeftPad {
+	if len(s) < la || s[0:la] != AddressLeftPad {
 		return Address{}, addressError("invalid left pad")
 	}
 

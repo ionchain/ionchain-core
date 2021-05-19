@@ -3919,7 +3919,7 @@ var outputPostFormatter = function(post){
 };
 
 var inputAddressFormatter = function (address) {
-    var iban = new Iban(address);
+    /*var iban = new Iban(address);
     if (iban.isValid() && iban.isDirect()) {
         return '0x' + iban.address();
     } else if (utils.isStrictAddress(address)) {
@@ -3927,7 +3927,8 @@ var inputAddressFormatter = function (address) {
     } else if (utils.isAddress(address)) {
         return '0x' + address;
     }
-    throw new Error('invalid address');
+    throw new Error('invalid address');*/
+  return address;
 };
 
 
@@ -5306,11 +5307,11 @@ var methods = function () {
 
     });
 
-    var getCompilers = new Method({
+   /* var getCompilers = new Method({
         name: 'getCompilers',
         call: 'eth_getCompilers',
         params: 0
-    });
+    });*/
 
     var getBlockTransactionCount = new Method({
         name: 'getBlockTransactionCount',
@@ -5401,23 +5402,23 @@ var methods = function () {
         outputFormatter: utils.toDecimal
     });
 
-    var compileSolidity = new Method({
-        name: 'compile.solidity',
-        call: 'eth_compileSolidity',
-        params: 1
-    });
+  /*var compileSolidity = new Method({
+      name: 'compile.solidity',
+      call: 'eth_compileSolidity',
+      params: 1
+  });
 
-    var compileLLL = new Method({
-        name: 'compile.lll',
-        call: 'eth_compileLLL',
-        params: 1
-    });
+  var compileLLL = new Method({
+      name: 'compile.lll',
+      call: 'eth_compileLLL',
+      params: 1
+  });
 
-    var compileSerpent = new Method({
-        name: 'compile.serpent',
-        call: 'eth_compileSerpent',
-        params: 1
-    });
+  var compileSerpent = new Method({
+      name: 'compile.serpent',
+      call: 'eth_compileSerpent',
+      params: 1
+  });*/
 
     var submitWork = new Method({
         name: 'submitWork',
@@ -5437,7 +5438,7 @@ var methods = function () {
         getCode,
         getBlock,
         getUncle,
-        getCompilers,
+        //getCompilers,
         getBlockTransactionCount,
         getBlockUncleCount,
         getTransaction,
@@ -5450,9 +5451,9 @@ var methods = function () {
         signTransaction,
         sendTransaction,
         sign,
-        compileSolidity,
+        /*compileSolidity,
         compileLLL,
-        compileSerpent,
+        compileSerpent,*/
         submitWork,
         getWork
     ];
